@@ -2,7 +2,7 @@
 unit: 001-portfolio-core
 intent: 001-investment-tracker
 created: 2026-03-02T10:45:00Z
-last_updated: 2026-03-02T14:30:00Z
+last_updated: 2026-03-02T15:00:00Z
 ---
 
 # Construction Log: 001-portfolio-core
@@ -27,7 +27,7 @@ last_updated: 2026-03-02T14:30:00Z
 | Bolt ID | Stories | Status | Changed |
 |---------|---------|--------|---------|
 | 001-portfolio-core | 001–004 | ✅ complete | 2026-03-02 |
-| 002-portfolio-core | 005–009 | [ ] planned | - |
+| 002-portfolio-core | 005–009 | ✅ complete | 2026-03-02 |
 
 ## Execution History
 
@@ -40,6 +40,12 @@ last_updated: 2026-03-02T14:30:00Z
 | 2026-03-02T14:20:00Z | 001-portfolio-core | stage-complete | implement → test |
 | 2026-03-02T14:25:00Z | 001-portfolio-core | stage-complete | test → complete |
 | 2026-03-02T14:30:00Z | 001-portfolio-core | bolt-complete | ddd-03-test-report.md; stories 001–004 implemented |
+| 2026-03-02T15:00:00Z | 002-portfolio-core | started | Stage 1: Domain Model |
+| 2026-03-02T15:05:00Z | 002-portfolio-core | stage-complete | model → design |
+| 2026-03-02T15:15:00Z | 002-portfolio-core | stage-complete | design → adr |
+| 2026-03-02T15:20:00Z | 002-portfolio-core | stage-complete | adr → implement |
+| 2026-03-02T15:45:00Z | 002-portfolio-core | stage-complete | implement → test |
+| 2026-03-02T16:00:00Z | 002-portfolio-core | stage-complete | test → complete |
 
 ## Execution Summary
 
@@ -47,7 +53,7 @@ last_updated: 2026-03-02T14:30:00Z
 |--------|-------|
 | Original bolts planned | 2 |
 | Current bolt count | 2 |
-| Bolts completed | 1 |
+| Bolts completed | 2 |
 | Bolts in progress | 0 |
 | Bolts remaining | 1 |
 | Replanning events | 0 |

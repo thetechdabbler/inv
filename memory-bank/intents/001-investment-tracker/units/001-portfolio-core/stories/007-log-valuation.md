@@ -2,11 +2,11 @@
 id: 007-log-valuation
 unit: 001-portfolio-core
 intent: 001-investment-tracker
-status: draft
+status: complete
 priority: must
-created: 2026-03-02T10:30:00Z
+created: 2026-03-02T10:30:00.000Z
 assigned_bolt: 002-portfolio-core
-implemented: false
+implemented: true
 ---
 
 # Story: 007-log-valuation
