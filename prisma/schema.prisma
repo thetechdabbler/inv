@@ -21,6 +21,7 @@ model Account {
   updatedAt            DateTime      @updatedAt
   transactions         Transaction[]
   valuations           Valuation[]
+  marketConfig         AccountMarketConfig?
 
   @@index([type])
   @@map("accounts")
@@ -68,4 +69,59 @@ model InterestRateConfig {
   @@index([accountType])
   @@index([accountId])
   @@map("interest_rate_configs")
+}
+
+// Bolt 004: scheme code / ticker and units/shares for MF and stock valuation
+model AccountMarketConfig {
+  id          String   @id @default(cuid())
+  accountId   String   @unique @map("account_id")
+  schemeCode  String?  @map("scheme_code")  // MF: mfapi.in scheme code
+  ticker      String?  @map("ticker")      // Stock: e.g. RELIANCE.NS
+  units       Float?   @map("units")       // MF: number of units
+  shares      Float?   @map("shares")     // Stock: number of shares
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("account_market_configs")
+}
+
+// Bolt 007: single-user auth — passphrase hash and PBKDF2 salt (singleton)
+model UserConfig {
+  id                  String   @id @default(cuid())
+  passphraseHash      String   @map("passphrase_hash")
+  keyDerivationSalt   String?  @map("key_derivation_salt")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("user_config")
+}
+
+// Bolt 008: login attempts (purge after 90 days)
+model AccessLog {
+  id        String   @id @default(cuid())
+  action    String   @map("action")
+  ipAddress String   @map("ip_address")
+  success   Boolean  @map("success")
+  timestamp DateTime @default(now()) @map("timestamp")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([timestamp])
+  @@map("access_logs")
+}
+
+// Bolt 008: critical data changes (append-only)
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  action     String   @map("action")
+  oldValue   String?  @map("old_value")
+  newValue   String?  @map("new_value")
+  timestamp  DateTime @default(now()) @map("timestamp")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([timestamp])
+  @@index([entityType])
+  @@map("audit_logs")
 }

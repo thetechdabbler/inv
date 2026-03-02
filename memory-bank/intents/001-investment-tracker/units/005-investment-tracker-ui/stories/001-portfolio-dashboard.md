@@ -2,11 +2,11 @@
 id: 001-portfolio-dashboard
 unit: 005-investment-tracker-ui
 intent: 001-investment-tracker
-status: draft
+status: complete
 priority: must
-created: 2026-03-02T10:30:00Z
+created: 2026-03-02T10:30:00.000Z
 assigned_bolt: 009-investment-tracker-ui
-implemented: false
+implemented: true
 ---
 
 # Story: 001-portfolio-dashboard

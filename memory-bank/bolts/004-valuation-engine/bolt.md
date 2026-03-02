@@ -3,21 +3,37 @@ id: 004-valuation-engine
 unit: 002-valuation-engine
 intent: 001-investment-tracker
 type: ddd-construction-bolt
-status: planned
+status: complete
 stories:
   - 004-mf-nav-fetch
   - 005-stock-price-fetch
-created: 2026-03-02T10:35:00Z
-started: null
-completed: null
+created: 2026-03-02T10:35:00.000Z
+started: 2026-03-02T18:00:00.000Z
+completed: "2026-03-02T15:24:55Z"
 current_stage: null
-stages_completed: []
-
-requires_bolts: [003-valuation-engine]
-enables_bolts: [009-investment-tracker-ui]
-requires_units: [001-portfolio-core]
+stages_completed:
+  - name: model
+    completed: 2026-03-02T18:00:00.000Z
+    artifact: ddd-01-domain-model.md
+  - name: design
+    completed: 2026-03-02T18:15:00.000Z
+    artifact: ddd-02-technical-design.md
+  - name: adr
+    completed: 2026-03-02T18:20:00.000Z
+    artifact: none
+  - name: implement
+    completed: 2026-03-02T20:30:00.000Z
+    artifact: src/
+  - name: test
+    completed: 2026-03-02T20:52:00.000Z
+    artifact: ddd-03-test-report.md
+requires_bolts:
+  - 003-valuation-engine
+enables_bolts:
+  - 009-investment-tracker-ui
+requires_units:
+  - 001-portfolio-core
 blocks: false
-
 complexity:
   avg_complexity: 2
   avg_uncertainty: 2
@@ -47,10 +63,11 @@ Enable automated valuation updates for traded instruments by fetching live marke
 
 ## Stages
 
-- [ ] **1. Domain Model**: Pending → ddd-01-domain-model.md
-- [ ] **2. Technical Design**: Pending → ddd-02-technical-design.md
-- [ ] **3. Implementation**: Pending → src/
-- [ ] **4. Testing**: Pending → ddd-03-test-report.md
+- [x] **1. Domain Model**: Complete → ddd-01-domain-model.md
+- [x] **2. Technical Design**: Complete → ddd-02-technical-design.md
+- [x] **3. ADR Analysis**: Complete (none)
+- [x] **4. Implementation**: Complete → src/
+- [x] **5. Testing**: Complete → ddd-03-test-report.md
 
 ## Dependencies
 

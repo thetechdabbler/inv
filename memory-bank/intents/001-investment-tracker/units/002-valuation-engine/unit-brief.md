@@ -2,9 +2,9 @@
 unit: 002-valuation-engine
 intent: 001-investment-tracker
 phase: inception
-status: draft
-created: 2026-03-02T10:25:00Z
-updated: 2026-03-02T10:25:00Z
+status: complete
+created: 2026-03-02T10:25:00.000Z
+updated: 2026-03-02T10:25:00.000Z
 ---
 
 # Unit Brief: Valuation Engine

@@ -3,22 +3,34 @@ id: 009-investment-tracker-ui
 unit: 005-investment-tracker-ui
 intent: 001-investment-tracker
 type: simple-construction-bolt
-status: planned
+status: complete
 stories:
   - 001-portfolio-dashboard
   - 002-account-management-forms
   - 003-transaction-valuation-forms
-created: 2026-03-02T10:35:00Z
-started: null
-completed: null
+created: 2026-03-02T10:35:00.000Z
+started: 2026-03-02T21:50:00.000Z
+completed: "2026-03-02T16:41:36Z"
 current_stage: null
-stages_completed: []
-
-requires_bolts: [002-portfolio-core, 007-auth-security]
-enables_bolts: [010-investment-tracker-ui]
-requires_units: [001-portfolio-core, 004-auth-security]
+stages_completed:
+  - name: plan
+    completed: 2026-03-02T21:50:00.000Z
+    artifact: implementation-plan.md
+  - name: implement
+    completed: 2026-03-02T22:15:00.000Z
+    artifact: implementation-walkthrough.md
+  - name: test
+    completed: 2026-03-02T22:10:00.000Z
+    artifact: test-walkthrough.md
+requires_bolts:
+  - 002-portfolio-core
+  - 007-auth-security
+enables_bolts:
+  - 010-investment-tracker-ui
+requires_units:
+  - 001-portfolio-core
+  - 004-auth-security
 blocks: false
-
 complexity:
   avg_complexity: 2
   avg_uncertainty: 1

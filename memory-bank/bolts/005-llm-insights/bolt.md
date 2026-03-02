@@ -3,16 +3,19 @@ id: 005-llm-insights
 unit: 003-llm-insights
 intent: 001-investment-tracker
 type: ddd-construction-bolt
-status: planned
+status: in-progress
 stories:
   - 001-portfolio-summary
   - 002-future-projections
   - 003-risk-analysis
 created: 2026-03-02T10:35:00Z
-started: null
+started: 2026-03-02T22:30:00Z
 completed: null
-current_stage: null
-stages_completed: []
+current_stage: design
+stages_completed:
+  - name: domain-model
+    completed: 2026-03-02T22:30:00Z
+    artifact: ddd-01-domain-model.md
 
 requires_bolts: [002-portfolio-core]
 enables_bolts: [006-llm-insights]

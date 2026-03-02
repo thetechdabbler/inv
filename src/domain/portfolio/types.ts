@@ -5,50 +5,50 @@
  */
 
 export type AccountType =
-  | "bank_deposit"
-  | "stocks"
-  | "mutual_fund"
-  | "ppf"
-  | "epf"
-  | "nps"
-  | "gratuity";
+	| "bank_deposit"
+	| "stocks"
+	| "mutual_fund"
+	| "ppf"
+	| "epf"
+	| "nps"
+	| "gratuity";
 
 export interface Account {
-  id: string;
-  type: AccountType;
-  name: string;
-  description: string | null;
-  initialBalancePaise: number;
-  createdAt: Date;
-  updatedAt: Date;
+	id: string;
+	type: AccountType;
+	name: string;
+	description: string | null;
+	initialBalancePaise: number;
+	createdAt: Date;
+	updatedAt: Date;
 }
 
 export interface AccountListItem extends Account {
-  currentValuePaise: number;
-  totalContributionsPaise: number;
+	currentValuePaise: number;
+	totalContributionsPaise: number;
 }
 
 export interface CreateAccountInput {
-  type: AccountType;
-  name: string;
-  description?: string | null;
-  initialBalancePaise: number;
+	type: AccountType;
+	name: string;
+	description?: string | null;
+	initialBalancePaise: number;
 }
 
 export interface UpdateAccountInput {
-  name?: string;
-  description?: string | null;
-  type?: AccountType;
+	name?: string;
+	description?: string | null;
+	type?: AccountType;
 }
 
 export const ACCOUNT_TYPES: AccountType[] = [
-  "bank_deposit",
-  "stocks",
-  "mutual_fund",
-  "ppf",
-  "epf",
-  "nps",
-  "gratuity",
+	"bank_deposit",
+	"stocks",
+	"mutual_fund",
+	"ppf",
+	"epf",
+	"nps",
+	"gratuity",
 ];
 
 export const NAME_MAX_LENGTH = 100;
@@ -57,41 +57,41 @@ export const NAME_MAX_LENGTH = 100;
 export type TransactionType = "investment" | "withdrawal";
 
 export const TRANSACTION_TYPES: TransactionType[] = [
-  "investment",
-  "withdrawal",
+	"investment",
+	"withdrawal",
 ];
 
 export interface Transaction {
-  id: string;
-  accountId: string;
-  date: Date;
-  amountPaise: number;
-  type: TransactionType;
-  description: string | null;
-  createdAt: Date;
+	id: string;
+	accountId: string;
+	date: Date;
+	amountPaise: number;
+	type: TransactionType;
+	description: string | null;
+	createdAt: Date;
 }
 
 export interface Valuation {
-  id: string;
-  accountId: string;
-  date: Date;
-  valuePaise: number;
-  createdAt: Date;
+	id: string;
+	accountId: string;
+	date: Date;
+	valuePaise: number;
+	createdAt: Date;
 }
 
 export interface HistoryEntry {
-  date: string;
-  type: "investment" | "withdrawal" | "valuation";
-  amountOrValuePaise: number;
-  description?: string | null;
-  createdAt: string;
+	date: string;
+	type: "investment" | "withdrawal" | "valuation";
+	amountOrValuePaise: number;
+	description?: string | null;
+	createdAt: string;
 }
 
 export interface PerformanceSnapshot {
-  totalContributionsPaise: number;
-  totalWithdrawalsPaise: number;
-  netInvestedPaise: number;
-  currentValuePaise: number;
-  profitLossPaise: number;
-  percentReturn: number | null;
+	totalContributionsPaise: number;
+	totalWithdrawalsPaise: number;
+	netInvestedPaise: number;
+	currentValuePaise: number;
+	profitLossPaise: number;
+	percentReturn: number | null;
 }

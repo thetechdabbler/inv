@@ -2,7 +2,7 @@
 unit: 002-valuation-engine
 intent: 001-investment-tracker
 created: 2026-03-02T16:30:00Z
-last_updated: 2026-03-02T16:30:00Z
+last_updated: 2026-03-02T18:00:00Z
 ---
 
 # Construction Log: 002-valuation-engine
@@ -27,7 +27,7 @@ last_updated: 2026-03-02T16:30:00Z
 | Bolt ID | Stories | Status | Changed |
 |---------|---------|--------|---------|
 | 003-valuation-engine | 001–003 | ✅ complete | 2026-03-02 |
-| 004-valuation-engine | 004–005 | [ ] planned | - |
+| 004-valuation-engine | 004–005 | ⏳ in-progress | 2026-03-02 |
 
 ## Execution History
 
@@ -39,6 +39,12 @@ last_updated: 2026-03-02T16:30:00Z
 | 2026-03-02T17:00:00Z | 003-valuation-engine | stage-complete | adr → implement |
 | 2026-03-02T17:30:00Z | 003-valuation-engine | stage-complete | implement → test |
 | 2026-03-02T17:45:00Z | 003-valuation-engine | stage-complete | test → complete |
+| 2026-03-02T18:00:00Z | 004-valuation-engine | started | Stage 1: Domain Model |
+| 2026-03-02T18:10:00Z | 004-valuation-engine | stage-complete | model → design |
+| 2026-03-02T18:20:00Z | 004-valuation-engine | stage-complete | design → adr |
+| 2026-03-02T18:25:00Z | 004-valuation-engine | stage-complete | adr → implement |
+| 2026-03-02T20:30:00Z | 004-valuation-engine | stage-complete | implement → test |
+| 2026-03-02T20:52:00Z | 004-valuation-engine | completed | All 5 stages done |
 
 ## Execution Summary
 
@@ -47,7 +53,7 @@ last_updated: 2026-03-02T16:30:00Z
 | Original bolts planned | 2 |
 | Current bolt count | 2 |
 | Bolts completed | 1 |
-| Bolts in progress | 0 |
+| Bolts in progress | 1 |
 | Bolts remaining | 1 |
 | Replanning events | 0 |
 

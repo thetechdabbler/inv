@@ -2,11 +2,11 @@
 id: 005-stock-price-fetch
 unit: 002-valuation-engine
 intent: 001-investment-tracker
-status: draft
+status: complete
 priority: should
-created: 2026-03-02T10:30:00Z
+created: 2026-03-02T10:30:00.000Z
 assigned_bolt: 004-valuation-engine
-implemented: false
+implemented: true
 ---
 
 # Story: 005-stock-price-fetch

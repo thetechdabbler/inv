@@ -3,22 +3,27 @@ id: 007-auth-security
 unit: 004-auth-security
 intent: 001-investment-tracker
 type: ddd-construction-bolt
-status: planned
+status: complete
 stories:
   - 001-passphrase-setup
   - 002-passphrase-login
   - 003-field-encryption
-created: 2026-03-02T10:35:00Z
-started: null
-completed: null
+created: 2026-03-02T10:35:00.000Z
+started: 2026-03-02T20:00:00.000Z
+completed: "2026-03-02T15:54:09Z"
 current_stage: null
-stages_completed: []
-
+stages_completed:
+  - domain_model
+  - design
+  - adr
+  - implement
+  - test
 requires_bolts: []
-enables_bolts: [008-auth-security, 009-investment-tracker-ui]
+enables_bolts:
+  - 008-auth-security
+  - 009-investment-tracker-ui
 requires_units: []
 blocks: false
-
 complexity:
   avg_complexity: 2
   avg_uncertainty: 1
@@ -49,10 +54,11 @@ Secure the application with passphrase authentication and encrypt sensitive data
 
 ## Stages
 
-- [ ] **1. Domain Model**: Pending → ddd-01-domain-model.md
-- [ ] **2. Technical Design**: Pending → ddd-02-technical-design.md
-- [ ] **3. Implementation**: Pending → src/
-- [ ] **4. Testing**: Pending → ddd-03-test-report.md
+- [x] **1. Domain Model**: Complete → ddd-01-domain-model.md
+- [x] **2. Technical Design**: Complete → ddd-02-technical-design.md
+- [x] **3. ADR Analysis**: Complete → adr-002-passphrase-auth-iron-session.md
+- [x] **4. Implementation**: Complete → src/
+- [x] **5. Testing**: Complete → ddd-03-test-report.md
 
 ## Dependencies
 

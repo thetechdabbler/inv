@@ -2,11 +2,11 @@
 id: 001-passphrase-setup
 unit: 004-auth-security
 intent: 001-investment-tracker
-status: draft
+status: complete
 priority: should
-created: 2026-03-02T10:30:00Z
+created: 2026-03-02T10:30:00.000Z
 assigned_bolt: 007-auth-security
-implemented: false
+implemented: true
 ---
 
 # Story: 001-passphrase-setup
