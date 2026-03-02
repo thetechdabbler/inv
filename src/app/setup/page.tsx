@@ -66,6 +66,7 @@ export default function SetupPage() {
 		<main className="flex min-h-screen flex-col items-center justify-center px-4">
 			<div className="w-full max-w-sm rounded-lg border bg-white p-6 shadow">
 				<h1 className="mb-4 text-xl font-semibold">Set up passphrase</h1>
+				<p className="mb-3 text-xs text-gray-400">Hint: asd@1234</p>
 				<form onSubmit={handleSubmit} className="flex flex-col gap-3">
 					<label className="text-sm text-gray-600" htmlFor="passphrase">
 						Passphrase (min 8 characters)

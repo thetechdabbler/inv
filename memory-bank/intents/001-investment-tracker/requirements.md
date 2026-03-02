@@ -1,9 +1,9 @@
 ---
 intent: 001-investment-tracker
 phase: inception
-status: inception-complete
-created: 2026-03-02T10:15:00Z
-updated: 2026-03-02T10:20:00Z
+status: complete
+created: 2026-03-02T10:15:00.000Z
+updated: 2026-03-02T10:20:00.000Z
 ---
 
 # Requirements: Investment Tracker

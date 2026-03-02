@@ -2,11 +2,11 @@
 id: 004-portfolio-charts
 unit: 005-investment-tracker-ui
 intent: 001-investment-tracker
-status: draft
+status: complete
 priority: must
-created: 2026-03-02T10:30:00Z
+created: 2026-03-02T10:30:00.000Z
 assigned_bolt: 010-investment-tracker-ui
-implemented: false
+implemented: true
 ---
 
 # Story: 004-portfolio-charts

@@ -31,3 +31,12 @@ Thumbs.db
 # Test
 coverage
 .nyc_output
+
+# Build artifacts
+tsconfig.tsbuildinfo
+
+# Local dev DB
+dev.db
+
+# Claude config
+.claude/

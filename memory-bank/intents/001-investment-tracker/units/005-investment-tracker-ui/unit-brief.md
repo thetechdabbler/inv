@@ -4,9 +4,9 @@ intent: 001-investment-tracker
 unit_type: frontend
 default_bolt_type: simple-construction-bolt
 phase: inception
-status: draft
-created: 2026-03-02T10:25:00Z
-updated: 2026-03-02T10:25:00Z
+status: complete
+created: 2026-03-02T10:25:00.000Z
+updated: 2026-03-02T10:25:00.000Z
 ---
 
 # Unit Brief: Investment Tracker UI

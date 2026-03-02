@@ -46,3 +46,37 @@ export type AccountType = (typeof ACCOUNT_TYPES)[number];
 
 export const TRANSACTION_TYPES = ["investment", "withdrawal"] as const;
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
+
+export interface HistoryEntry {
+	date: string; // "YYYY-MM-DD"
+	type: "investment" | "withdrawal" | "valuation";
+	amountOrValuePaise: number;
+	description?: string | null;
+	createdAt: string;
+}
+
+export interface AccountHistoryResponse {
+	entries: HistoryEntry[];
+}
+
+export interface LLMInteraction {
+	id: string;
+	insightType: string;
+	prompt: string;
+	response: string;
+	modelUsed: string;
+	tokensUsed: number | null;
+	success: boolean;
+	errorMessage: string | null;
+	createdAt: string;
+}
+
+export interface InsightsHistoryResponse {
+	interactions: LLMInteraction[];
+	total: number;
+}
+
+export interface InsightsQueryResponse {
+	answer: string;
+	modelUsed: string;
+}

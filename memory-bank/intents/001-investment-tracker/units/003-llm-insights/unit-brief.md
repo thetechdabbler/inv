@@ -1,10 +1,10 @@
 ---
 unit: 003-llm-insights
 intent: 001-investment-tracker
-phase: inception
+phase: operations
 status: complete
 created: 2026-03-02T10:25:00.000Z
-updated: 2026-03-02T10:25:00.000Z
+updated: 2026-03-03T01:20:00Z
 ---
 
 # Unit Brief: LLM Insights
