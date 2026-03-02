@@ -3,23 +3,37 @@ id: 001-portfolio-core
 unit: 001-portfolio-core
 intent: 001-investment-tracker
 type: ddd-construction-bolt
-status: planned
+status: complete
 stories:
   - 001-create-account
   - 002-list-accounts
   - 003-update-account
   - 004-delete-account
-created: 2026-03-02T10:35:00Z
-started: null
-completed: null
+created: 2026-03-02T10:35:00.000Z
+started: 2026-03-02T10:45:00.000Z
+completed: "2026-03-02T14:22:17Z"
 current_stage: null
-stages_completed: []
-
+stages_completed:
+  - name: model
+    completed: 2026-03-02T10:50:00.000Z
+    artifact: ddd-01-domain-model.md
+  - name: design
+    completed: 2026-03-02T10:55:00.000Z
+    artifact: ddd-02-technical-design.md
+  - name: adr
+    completed: 2026-03-02T11:05:00.000Z
+    artifact: adr-001-integer-paise-monetary-amounts.md
+  - name: implement
+    completed: 2026-03-02T14:20:00.000Z
+    artifact: src/
+  - name: test
+    completed: 2026-03-02T14:25:00.000Z
+    artifact: ddd-03-test-report.md
 requires_bolts: []
-enables_bolts: [002-portfolio-core]
+enables_bolts:
+  - 002-portfolio-core
 requires_units: []
 blocks: false
-
 complexity:
   avg_complexity: 1
   avg_uncertainty: 1

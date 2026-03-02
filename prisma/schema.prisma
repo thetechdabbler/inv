@@ -1,0 +1,53 @@
+// Prisma schema - Investment Tracker
+// ADR-001: All monetary amounts in paise (integer)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// SQLite does not support native enums; use String, validate in app (ADR-001, domain types).
+model Account {
+  id                   String        @id @default(cuid())
+  type                 String        // one of: bank_deposit, stocks, mutual_fund, ppf, epf, nps, gratuity
+  name                 String
+  description          String?
+  initialBalancePaise  Int           @map("initial_balance_paise")
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  transactions         Transaction[]
+  valuations           Valuation[]
+
+  @@index([type])
+  @@map("accounts")
+}
+
+model Transaction {
+  id           String          @id @default(cuid())
+  accountId    String          @map("account_id")
+  date         DateTime
+  amountPaise  Int             @map("amount_paise")
+  type         String          // investment | withdrawal
+  description  String?
+  createdAt    DateTime        @default(now())
+  account      Account         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, date])
+  @@map("transactions")
+}
+
+model Valuation {
+  id          String   @id @default(cuid())
+  accountId   String   @map("account_id")
+  date        DateTime
+  valuePaise  Int      @map("value_paise")
+  createdAt   DateTime @default(now())
+  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, date])
+  @@map("valuations")
+}
