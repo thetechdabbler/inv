@@ -1,6 +1,6 @@
 ---
-last_updated: 2026-03-02T21:15:00Z
-total_decisions: 2
+last_updated: 2026-03-03T00:15:00Z
+total_decisions: 4
 ---
 
 # Decision Index
@@ -25,6 +25,22 @@ Use this to find relevant prior decisions when working on related features.
 - **Path**: `bolts/001-portfolio-core/adr-001-integer-paise-monetary-amounts.md`
 - **Summary**: The investment tracker needs a consistent, precise representation for money in INR. All monetary amounts are stored and transmitted as non-negative integers in paise (1 INR = 100 paise), with display conversion only at the presentation layer.
 - **Read when**: Working on accounts, transactions, valuations, performance calculations, API request/response schemas, or any feature that handles money; when choosing types for monetary fields or adding new endpoints that accept or return amounts.
+
+### ADR-004: Decorator Pattern for Transparent LLM Audit Logging
+- **Status**: accepted
+- **Date**: 2026-03-03
+- **Bolt**: 006-llm-insights (003-llm-insights)
+- **Path**: `bolts/006-llm-insights/adr-004-auditing-llm-gateway-decorator.md`
+- **Summary**: All LLM calls must be logged to the audit trail (LLMQuery + LLMResponse). Rather than adding logging inside each use case, an `AuditingLLMGateway` decorator wraps any `LLMGatewayPort` implementation, intercepting every `complete()` call to write audit records — including failures — before returning.
+- **Read when**: Adding a new insight type or route that calls the LLM gateway; debugging missing audit trail entries; instantiating `LLMGatewayPort` in any route handler; considering changes to the audit logging approach.
+
+### ADR-003: Use OpenAI Node SDK Behind a Hexagonal LLM Port
+- **Status**: accepted
+- **Date**: 2026-03-02
+- **Bolt**: 005-llm-insights (003-llm-insights)
+- **Path**: `bolts/005-llm-insights/adr-003-openai-sdk-llm-provider.md`
+- **Summary**: The LLM Insights unit requires an AI provider for portfolio summaries, projections, and risk analysis. The `openai` Node SDK is used as the concrete implementation behind an `LLMGateway` port (hexagonal pattern); GPT-4o-mini is the default model tier for cost efficiency, with GPT-4o available as a configurable override.
+- **Read when**: Working on LLM/AI integration, adding new insight types, swapping AI providers, configuring model tiers, or building features that call the LLMGateway port.
 
 ### ADR-002: Passphrase-Based Authentication with Iron-Session (No JWT/OAuth)
 - **Status**: accepted

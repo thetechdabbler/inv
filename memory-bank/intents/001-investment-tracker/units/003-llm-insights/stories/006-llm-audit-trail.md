@@ -2,11 +2,11 @@
 id: 006-llm-audit-trail
 unit: 003-llm-insights
 intent: 001-investment-tracker
-status: draft
+status: complete
 priority: could
-created: 2026-03-02T10:30:00Z
+created: 2026-03-02T10:30:00.000Z
 assigned_bolt: 006-llm-insights
-implemented: false
+implemented: true
 ---
 
 # Story: 006-llm-audit-trail

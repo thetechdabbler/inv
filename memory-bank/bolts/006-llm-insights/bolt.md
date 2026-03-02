@@ -3,22 +3,35 @@ id: 006-llm-insights
 unit: 003-llm-insights
 intent: 001-investment-tracker
 type: ddd-construction-bolt
-status: planned
+status: complete
 stories:
   - 004-rebalancing-recommendations
   - 005-natural-language-query
   - 006-llm-audit-trail
-created: 2026-03-02T10:35:00Z
-started: null
-completed: null
+created: 2026-03-02T10:35:00.000Z
+started: 2026-03-02T23:50:00.000Z
+completed: "2026-03-02T18:30:06Z"
 current_stage: null
-stages_completed: []
-
-requires_bolts: [005-llm-insights]
-enables_bolts: [010-investment-tracker-ui]
-requires_units: [001-portfolio-core]
+stages_completed:
+  - name: domain-model
+    completed: 2026-03-03T00:00:00.000Z
+    artifact: ddd-01-domain-model.md
+  - name: design
+    completed: 2026-03-03T00:10:00.000Z
+    artifact: ddd-02-technical-design.md
+  - name: adr-analysis
+    completed: 2026-03-03T00:15:00.000Z
+    artifact: adr-004-auditing-llm-gateway-decorator.md
+  - name: implement
+    completed: 2026-03-03T00:30:00.000Z
+    artifact: src/
+requires_bolts:
+  - 005-llm-insights
+enables_bolts:
+  - 010-investment-tracker-ui
+requires_units:
+  - 001-portfolio-core
 blocks: false
-
 complexity:
   avg_complexity: 2
   avg_uncertainty: 2

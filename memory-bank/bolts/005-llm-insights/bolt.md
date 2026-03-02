@@ -3,25 +3,35 @@ id: 005-llm-insights
 unit: 003-llm-insights
 intent: 001-investment-tracker
 type: ddd-construction-bolt
-status: in-progress
+status: complete
 stories:
   - 001-portfolio-summary
   - 002-future-projections
   - 003-risk-analysis
-created: 2026-03-02T10:35:00Z
-started: 2026-03-02T22:30:00Z
-completed: null
-current_stage: design
+created: 2026-03-02T10:35:00.000Z
+started: 2026-03-02T22:30:00.000Z
+completed: "2026-03-02T17:55:10Z"
+current_stage: null
 stages_completed:
   - name: domain-model
-    completed: 2026-03-02T22:30:00Z
+    completed: 2026-03-02T22:30:00.000Z
     artifact: ddd-01-domain-model.md
-
-requires_bolts: [002-portfolio-core]
-enables_bolts: [006-llm-insights]
-requires_units: [001-portfolio-core]
+  - name: design
+    completed: 2026-03-02T23:00:00.000Z
+    artifact: ddd-02-technical-design.md
+  - name: adr-analysis
+    completed: 2026-03-02T23:05:00.000Z
+    artifact: adr-003-openai-sdk-llm-provider.md
+  - name: implement
+    completed: 2026-03-02T23:30:00.000Z
+    artifact: src/
+requires_bolts:
+  - 002-portfolio-core
+enables_bolts:
+  - 006-llm-insights
+requires_units:
+  - 001-portfolio-core
 blocks: false
-
 complexity:
   avg_complexity: 2
   avg_uncertainty: 2

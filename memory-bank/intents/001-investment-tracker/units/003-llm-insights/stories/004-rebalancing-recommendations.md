@@ -2,11 +2,11 @@
 id: 004-rebalancing-recommendations
 unit: 003-llm-insights
 intent: 001-investment-tracker
-status: draft
+status: complete
 priority: should
-created: 2026-03-02T10:30:00Z
+created: 2026-03-02T10:30:00.000Z
 assigned_bolt: 006-llm-insights
-implemented: false
+implemented: true
 ---
 
 # Story: 004-rebalancing-recommendations

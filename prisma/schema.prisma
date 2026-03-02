@@ -110,6 +110,35 @@ model AccessLog {
   @@map("access_logs")
 }
 
+// Bolt 006: LLM interaction audit trail
+model LLMQuery {
+  id             String       @id @default(cuid())
+  insightType    String       @map("insight_type") // summary|projections|risk|rebalancing|query
+  prompt         String
+  modelRequested String       @map("model_requested")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  response       LLMResponse?
+
+  @@index([insightType])
+  @@index([createdAt])
+  @@map("llm_queries")
+}
+
+model LLMResponse {
+  id           String    @id @default(cuid())
+  queryId      String    @unique @map("query_id")
+  responseText String    @map("response_text")
+  modelUsed    String    @map("model_used")
+  tokensUsed   Int?      @map("tokens_used")
+  success      Boolean
+  errorMessage String?   @map("error_message")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  query        LLMQuery  @relation(fields: [queryId], references: [id], onDelete: Cascade)
+
+  @@index([queryId])
+  @@map("llm_responses")
+}
+
 // Bolt 008: critical data changes (append-only)
 model AuditLog {
   id         String   @id @default(cuid())
