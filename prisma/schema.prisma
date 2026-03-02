@@ -51,3 +51,21 @@ model Valuation {
   @@index([accountId, date])
   @@map("valuations")
 }
+
+// Bolt 003: PPF/EPF rate per financial year; deposit rate/frequency per account
+model InterestRateConfig {
+  id                    String   @id @default(cuid())
+  accountType           String   @map("account_type") // ppf | epf | bank_deposit
+  financialYear         Int?     @map("financial_year") // FY start year (e.g. 2024 = FY 2024-25); null for deposit
+  ratePercentPerAnnum   Float    @map("rate_percent_per_annum")
+  compoundingFrequency  String?  @map("compounding_frequency") // monthly | quarterly | annual; for deposit only
+  accountId             String?  @map("account_id") // for deposit per-account override
+  effectiveFrom         DateTime? @map("effective_from")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([accountType, financialYear, accountId], map: "interest_rate_config_type_year_account_key")
+  @@index([accountType])
+  @@index([accountId])
+  @@map("interest_rate_configs")
+}

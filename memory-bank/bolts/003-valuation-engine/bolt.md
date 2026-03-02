@@ -3,22 +3,38 @@ id: 003-valuation-engine
 unit: 002-valuation-engine
 intent: 001-investment-tracker
 type: ddd-construction-bolt
-status: planned
+status: complete
 stories:
   - 001-ppf-calculation
   - 002-epf-calculation
   - 003-deposit-calculation
-created: 2026-03-02T10:35:00Z
-started: null
-completed: null
+created: 2026-03-02T10:35:00.000Z
+started: 2026-03-02T16:30:00.000Z
+completed: "2026-03-02T14:59:37Z"
 current_stage: null
-stages_completed: []
-
-requires_bolts: [002-portfolio-core]
-enables_bolts: [004-valuation-engine]
-requires_units: [001-portfolio-core]
+stages_completed:
+  - name: model
+    completed: 2026-03-02T16:35:00.000Z
+    artifact: ddd-01-domain-model.md
+  - name: design
+    completed: 2026-03-02T16:45:00.000Z
+    artifact: ddd-02-technical-design.md
+  - name: adr
+    completed: 2026-03-02T16:50:00.000Z
+    artifact: none
+  - name: implement
+    completed: 2026-03-02T17:30:00.000Z
+    artifact: src/
+  - name: test
+    completed: 2026-03-02T17:45:00.000Z
+    artifact: ddd-03-test-report.md
+requires_bolts:
+  - 002-portfolio-core
+enables_bolts:
+  - 004-valuation-engine
+requires_units:
+  - 001-portfolio-core
 blocks: false
-
 complexity:
   avg_complexity: 2
   avg_uncertainty: 2
