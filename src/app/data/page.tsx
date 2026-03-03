@@ -1,9 +1,35 @@
 "use client";
 
+import { PageTransition } from "@/components/PageTransition";
 import { RequireAuth } from "@/components/RequireAuth";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api";
-
-const API_BASE = "/api/v1";
+import {
+	AlertTriangle,
+	CheckCircle2,
+	Download,
+	FileJson,
+	FileSpreadsheet,
+	Loader2,
+	Upload,
+	UploadCloud,
+} from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -11,6 +37,8 @@ type ImportResult = {
 	ok: boolean;
 	counts?: { accounts: number; transactions: number; valuations: number };
 };
+
+const API_BASE = "/api/v1";
 
 function downloadBlob(blob: Blob, filename: string) {
 	const url = URL.createObjectURL(blob);
@@ -28,6 +56,9 @@ function DataContent() {
 	const [importing, setImporting] = useState(false);
 	const [lastExport, setLastExport] = useState<string | null>(null);
 	const [lastImport, setLastImport] = useState<ImportResult | null>(null);
+	const [dragOver, setDragOver] = useState(false);
+	const [importConfirmOpen, setImportConfirmOpen] = useState(false);
+	const [pendingFile, setPendingFile] = useState<File | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	async function handleExport(format: "json" | "csv") {
@@ -87,69 +118,111 @@ function DataContent() {
 		}
 	}
 
-	function onFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-		const file = e.target.files?.[0];
-		if (!file) return;
+	function processFile(file: File) {
 		if (!file.name.endsWith(".json")) {
 			toast.error("Please select a JSON backup file");
 			return;
 		}
-		if (
-			!window.confirm(
-				"Importing will replace ALL existing data (accounts, transactions, valuations). This action cannot be undone.\n\nAre you sure you want to continue?",
-			)
-		) {
+		setPendingFile(file);
+		setImportConfirmOpen(true);
+	}
+
+	function onConfirmImport() {
+		if (pendingFile) {
+			void handleImport(pendingFile);
+			setPendingFile(null);
+			setImportConfirmOpen(false);
 			if (fileInputRef.current) fileInputRef.current.value = "";
-			return;
 		}
-		handleImport(file);
+	}
+
+	function onCancelImport() {
+		setPendingFile(null);
+		setImportConfirmOpen(false);
+		if (fileInputRef.current) fileInputRef.current.value = "";
+	}
+
+	function onFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+		const file = e.target.files?.[0];
+		if (!file) return;
+		processFile(file);
+	}
+
+	function onDrop(e: React.DragEvent) {
+		e.preventDefault();
+		setDragOver(false);
+		const file = e.dataTransfer.files[0];
+		if (file) processFile(file);
+	}
+
+	function onDropzoneKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+		if (e.key === "Enter" || e.key === " ") {
+			e.preventDefault();
+			fileInputRef.current?.click();
+		}
 	}
 
 	return (
-		<div className="space-y-6">
+		<PageTransition className="space-y-6">
+			<Dialog
+				open={importConfirmOpen}
+				onOpenChange={(open) => !open && onCancelImport()}
+			>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle className="flex items-center gap-2 text-destructive">
+							<AlertTriangle className="h-5 w-5" />
+							Confirm import
+						</DialogTitle>
+						<DialogDescription>
+							Importing will replace ALL existing data (accounts, transactions,
+							valuations). This action cannot be undone. Are you sure you want to
+							continue?
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter className="gap-2 sm:gap-0">
+						<Button
+							variant="outline"
+							onClick={() => {
+								void handleExport("json");
+							}}
+						>
+							Download backup first
+						</Button>
+						<Button variant="outline" onClick={onCancelImport}>
+							Cancel
+						</Button>
+						<Button variant="destructive" onClick={onConfirmImport}>
+							Confirm
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
 			<div>
-				<h1 className="text-2xl font-bold text-slate-800">
+				<h1 className="text-2xl font-bold text-foreground">
 					Import &amp; Export Data
 				</h1>
-				<p className="text-sm text-slate-400 mt-1">
+				<p className="text-sm text-muted-foreground mt-1">
 					Back up your portfolio data or restore from a previous backup
 				</p>
 			</div>
 
 			<div className="grid gap-6 lg:grid-cols-2">
-				{/* Export section */}
-				<div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-					<div className="border-b border-slate-200 px-6 py-4">
-						<div className="flex items-center gap-3">
-							<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50">
-								<svg
-									className="h-5 w-5 text-emerald-600"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-									aria-hidden="true"
-								>
-									<title>Export</title>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-									/>
-								</svg>
-							</div>
-							<div>
-								<h2 className="font-semibold text-slate-800">
-									Export Database
-								</h2>
-								<p className="text-xs text-slate-400">
-									Download a full backup of your data
-								</p>
-							</div>
+				<Card className="dark:glow-border">
+					<CardHeader className="flex-row items-center gap-3 space-y-0">
+						<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10">
+							<Download className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
 						</div>
-					</div>
-					<div className="p-6 space-y-4">
-						<p className="text-sm text-slate-600">
+						<div>
+							<CardTitle>Export Database</CardTitle>
+							<CardDescription>
+								Download a full backup of your data
+							</CardDescription>
+						</div>
+					</CardHeader>
+					<CardContent className="space-y-4">
+						<p className="text-sm text-muted-foreground">
 							Export all accounts, transactions, and valuations. Choose your
 							preferred format:
 						</p>
@@ -158,41 +231,25 @@ function DataContent() {
 								type="button"
 								onClick={() => handleExport("json")}
 								disabled={exporting !== null}
-								className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-3.5 text-left hover:border-indigo-300 hover:bg-indigo-50/50 disabled:opacity-50 transition-colors"
+								className="flex w-full items-center justify-between rounded-lg border border-border px-4 py-3.5 text-left hover:border-primary/50 hover:bg-accent disabled:opacity-50 transition-colors"
 							>
 								<div className="flex items-center gap-3">
-									<span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600 text-xs font-bold">
-										{}
+									<span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+										<FileJson className="h-4 w-4 text-primary" />
 									</span>
 									<div>
-										<p className="text-sm font-medium text-slate-700">
+										<p className="text-sm font-medium text-foreground">
 											JSON Backup
 										</p>
-										<p className="text-xs text-slate-400">
+										<p className="text-xs text-muted-foreground">
 											Single file, ideal for restoring later
 										</p>
 									</div>
 								</div>
 								{exporting === "json" ? (
-									<span className="text-xs text-indigo-500 font-medium">
-										Exporting&hellip;
-									</span>
+									<Loader2 className="h-4 w-4 animate-spin text-primary" />
 								) : (
-									<svg
-										className="h-5 w-5 text-slate-400"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-										aria-hidden="true"
-									>
-										<title>Download</title>
-										<path
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											strokeWidth={2}
-											d="M12 10v6m0 0l-3-3m3 3l3-3M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-										/>
-									</svg>
+									<Download className="h-4 w-4 text-muted-foreground" />
 								)}
 							</button>
 
@@ -200,172 +257,130 @@ function DataContent() {
 								type="button"
 								onClick={() => handleExport("csv")}
 								disabled={exporting !== null}
-								className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-3.5 text-left hover:border-indigo-300 hover:bg-indigo-50/50 disabled:opacity-50 transition-colors"
+								className="flex w-full items-center justify-between rounded-lg border border-border px-4 py-3.5 text-left hover:border-primary/50 hover:bg-accent disabled:opacity-50 transition-colors"
 							>
 								<div className="flex items-center gap-3">
-									<span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 text-xs font-bold">
-										CSV
+									<span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10">
+										<FileSpreadsheet className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
 									</span>
 									<div>
-										<p className="text-sm font-medium text-slate-700">
+										<p className="text-sm font-medium text-foreground">
 											CSV ZIP Archive
 										</p>
-										<p className="text-xs text-slate-400">
+										<p className="text-xs text-muted-foreground">
 											Spreadsheet-friendly, one file per table
 										</p>
 									</div>
 								</div>
 								{exporting === "csv" ? (
-									<span className="text-xs text-indigo-500 font-medium">
-										Exporting&hellip;
-									</span>
+									<Loader2 className="h-4 w-4 animate-spin text-primary" />
 								) : (
-									<svg
-										className="h-5 w-5 text-slate-400"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-										aria-hidden="true"
-									>
-										<title>Download</title>
-										<path
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											strokeWidth={2}
-											d="M12 10v6m0 0l-3-3m3 3l3-3M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-										/>
-									</svg>
+									<Download className="h-4 w-4 text-muted-foreground" />
 								)}
 							</button>
 						</div>
 
 						{lastExport && (
-							<p className="text-xs text-slate-400 pt-1">
+							<p className="text-xs text-muted-foreground pt-1">
 								Last export: {lastExport}
 							</p>
 						)}
-					</div>
-				</div>
+					</CardContent>
+				</Card>
 
-				{/* Import section */}
-				<div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-					<div className="border-b border-slate-200 px-6 py-4">
-						<div className="flex items-center gap-3">
-							<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50">
-								<svg
-									className="h-5 w-5 text-amber-600"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-									aria-hidden="true"
-								>
-									<title>Import</title>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-									/>
-								</svg>
-							</div>
-							<div>
-								<h2 className="font-semibold text-slate-800">
-									Import Database
-								</h2>
-								<p className="text-xs text-slate-400">
-									Restore from a JSON backup file
-								</p>
-							</div>
+				<Card className="dark:glow-border">
+					<CardHeader className="flex-row items-center gap-3 space-y-0">
+						<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
+							<Upload className="h-5 w-5 text-amber-600 dark:text-amber-400" />
 						</div>
-					</div>
-					<div className="p-6 space-y-4">
-						<div className="rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-							<svg
-								className="mx-auto h-10 w-10 text-slate-300"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-								aria-hidden="true"
-							>
-								<title>Upload file</title>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={1.5}
-									d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-								/>
-							</svg>
-							<p className="mt-2 text-sm text-slate-600">
-								{importing ? "Importing..." : "Select a JSON backup file"}
+						<div>
+							<CardTitle>Import Database</CardTitle>
+							<CardDescription>Restore from a JSON backup file</CardDescription>
+						</div>
+					</CardHeader>
+					<CardContent className="space-y-4">
+						<div
+							onDragOver={(e) => {
+								e.preventDefault();
+								setDragOver(true);
+							}}
+							onDragLeave={() => setDragOver(false)}
+							onDrop={onDrop}
+							onKeyDown={onDropzoneKeyDown}
+							tabIndex={0}
+							className={`rounded-lg border-2 border-dashed p-6 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+								dragOver
+									? "border-primary bg-primary/5"
+									: "border-border bg-muted/50"
+							}`}
+						>
+							<UploadCloud
+								className={`mx-auto h-10 w-10 ${
+									dragOver ? "text-primary" : "text-muted-foreground/50"
+								}`}
+							/>
+							<p className="mt-2 text-sm text-foreground">
+								{importing
+									? "Importing..."
+									: "Drop a JSON backup file here, or click below"}
 							</p>
-							<p className="text-xs text-slate-400 mt-1">
+							<p className="text-xs text-muted-foreground mt-1">
 								Only .json files exported from InvestTrack are supported
 							</p>
-							<label
-								htmlFor="import-file"
-								className={`mt-4 inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-medium shadow-sm transition-colors cursor-pointer ${
-									importing
-										? "bg-slate-300 text-slate-500"
-										: "bg-indigo-600 text-white hover:bg-indigo-700"
-								}`}
+							<Button
+								variant={importing ? "secondary" : "default"}
+								className="mt-4"
+								disabled={importing}
+								onClick={() => fileInputRef.current?.click()}
 							>
-								{importing ? "Importing\u2026" : "Choose File"}
-								<input
-									id="import-file"
-									ref={fileInputRef}
-									type="file"
-									accept=".json"
-									disabled={importing}
-									onChange={onFileSelect}
-									className="sr-only"
-								/>
-							</label>
+								{importing ? (
+									<>
+										<Loader2 className="h-4 w-4 animate-spin" />
+										Importing…
+									</>
+								) : (
+									"Choose File"
+								)}
+							</Button>
+							<input
+								ref={fileInputRef}
+								type="file"
+								accept=".json"
+								disabled={importing}
+								onChange={onFileSelect}
+								className="sr-only"
+							/>
 						</div>
 
-						<div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
-							<div className="flex gap-2">
-								<svg
-									className="h-5 w-5 text-amber-600 shrink-0 mt-0.5"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-									aria-hidden="true"
-								>
-									<title>Warning</title>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
-									/>
-								</svg>
-								<div>
-									<p className="text-sm font-medium text-amber-800">Warning</p>
-									<p className="text-xs text-amber-700 mt-0.5">
-										Importing will replace all existing accounts, transactions,
-										and valuations. Export your current data first if you want
-										to keep it.
-									</p>
-								</div>
-							</div>
-						</div>
+						<Alert className="border-amber-500/50 bg-amber-500/10">
+							<AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+							<AlertTitle className="text-amber-800 dark:text-amber-300">
+								Warning
+							</AlertTitle>
+							<AlertDescription className="text-amber-700 dark:text-amber-400">
+								Importing will replace all existing accounts, transactions, and
+								valuations. Export your current data first if you want to keep
+								it.
+							</AlertDescription>
+						</Alert>
 
 						{lastImport?.ok && lastImport.counts && (
-							<div className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3">
-								<p className="text-sm font-medium text-emerald-800">
+							<Alert className="border-emerald-500/50 bg-emerald-500/10">
+								<CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+								<AlertTitle className="text-emerald-800 dark:text-emerald-300">
 									Import successful
-								</p>
-								<div className="mt-2 flex gap-4 text-xs text-emerald-700">
-									<span>{lastImport.counts.accounts} accounts</span>
-									<span>{lastImport.counts.transactions} transactions</span>
-									<span>{lastImport.counts.valuations} valuations</span>
-								</div>
-							</div>
+								</AlertTitle>
+								<AlertDescription className="text-emerald-700 dark:text-emerald-400">
+									{lastImport.counts.accounts} accounts &middot;{" "}
+									{lastImport.counts.transactions} transactions &middot;{" "}
+									{lastImport.counts.valuations} valuations
+								</AlertDescription>
+							</Alert>
 						)}
-					</div>
-				</div>
+					</CardContent>
+				</Card>
 			</div>
-		</div>
+		</PageTransition>
 	);
 }
 

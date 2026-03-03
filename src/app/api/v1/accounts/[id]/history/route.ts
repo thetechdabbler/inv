@@ -40,14 +40,23 @@ export async function GET(
 			limitParam !== null
 				? Math.min(Math.max(1, Number.parseInt(limitParam, 10) || 50), 500)
 				: 50;
-		const entries = await getAccountHistory({
+		const offsetParam = url.searchParams.get("offset");
+		const offset =
+			offsetParam !== null
+				? Math.max(0, Number.parseInt(offsetParam, 10) || 0)
+				: 0;
+		const result = await getAccountHistory({
 			accountId: id,
 			from,
 			to,
 			limit,
+			offset,
 		});
-		if (entries === null) return notFound();
-		return NextResponse.json({ entries });
+		if (result === null) return notFound();
+		return NextResponse.json({
+			entries: result.entries,
+			total: result.total,
+		});
 	} catch (e) {
 		console.error("GET /api/v1/accounts/[id]/history", e);
 		return NextResponse.json(

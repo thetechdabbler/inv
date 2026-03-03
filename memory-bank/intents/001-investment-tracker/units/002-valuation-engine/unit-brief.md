@@ -65,9 +65,9 @@ Automated valuation service that computes interest-based returns for predictable
 
 | Metric | Count |
 |--------|-------|
-| Total Stories | 5 |
+| Total Stories | 6 |
 | Must Have | 0 |
-| Should Have | 5 |
+| Should Have | 6 |
 | Could Have | 0 |
 
 ### Stories
@@ -79,6 +79,7 @@ Automated valuation service that computes interest-based returns for predictable
 | 003-deposit-calculation | Calculate bank deposit returns | Should | Planned |
 | 004-mf-nav-fetch | Fetch mutual fund NAVs | Should | Planned |
 | 005-stock-price-fetch | Fetch stock prices | Should | Planned |
+| 006-gratuity-suggestion | Suggest gratuity value from salary and tenure | Should | Planned |
 
 ---
 

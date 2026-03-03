@@ -19,6 +19,8 @@ export async function createAccount(
 			name: input.name.trim(),
 			description: input.description?.trim() ?? null,
 			initialBalancePaise: input.initialBalancePaise,
+			expectedRatePercent: input.expectedRatePercent ?? null,
+			expectedMonthlyInvest: input.expectedMonthlyInvestPaise ?? null,
 		},
 	});
 	return {
@@ -27,6 +29,8 @@ export async function createAccount(
 		name: account.name,
 		description: account.description,
 		initialBalancePaise: account.initialBalancePaise,
+		expectedRatePercent: account.expectedRatePercent,
+		expectedMonthlyInvestPaise: account.expectedMonthlyInvest ?? null,
 		createdAt: account.createdAt,
 		updatedAt: account.updatedAt,
 	};
@@ -41,6 +45,8 @@ export async function findAccountById(id: string): Promise<Account | null> {
 		name: account.name,
 		description: account.description,
 		initialBalancePaise: account.initialBalancePaise,
+		expectedRatePercent: account.expectedRatePercent,
+		expectedMonthlyInvestPaise: account.expectedMonthlyInvest ?? null,
 		createdAt: account.createdAt,
 		updatedAt: account.updatedAt,
 	};
@@ -56,6 +62,8 @@ export async function findAllAccounts(): Promise<Account[]> {
 		name: a.name,
 		description: a.description,
 		initialBalancePaise: a.initialBalancePaise,
+		expectedRatePercent: a.expectedRatePercent,
+		expectedMonthlyInvestPaise: a.expectedMonthlyInvest ?? null,
 		createdAt: a.createdAt,
 		updatedAt: a.updatedAt,
 	}));
@@ -74,6 +82,12 @@ export async function updateAccount(
 					description: input.description?.trim() ?? null,
 				}),
 				...(input.type !== undefined && { type: input.type }),
+				...(input.expectedRatePercent !== undefined && {
+					expectedRatePercent: input.expectedRatePercent,
+				}),
+				...(input.expectedMonthlyInvestPaise !== undefined && {
+					expectedMonthlyInvest: input.expectedMonthlyInvestPaise,
+				}),
 			},
 		})
 		.catch(() => null);

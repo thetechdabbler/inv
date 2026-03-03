@@ -67,9 +67,9 @@ Frontend application providing the complete user interface for the investment tr
 
 | Metric | Count |
 |--------|-------|
-| Total Stories | 7 |
+| Total Stories | 8 |
 | Must Have | 5 |
-| Should Have | 1 |
+| Should Have | 2 |
 | Could Have | 1 |
 
 ### Stories
@@ -83,6 +83,7 @@ Frontend application providing the complete user interface for the investment tr
 | 005-filtering-and-search | Filter by account and date range | Must | Planned |
 | 006-responsive-layout | Responsive design for desktop and mobile | Should | Planned |
 | 007-llm-chat-interface | Natural language query interface | Could | Planned |
+| 008-gratuity-valuation-ui | Gratuity valuation helper fields and suggestion | Should | Planned |
 
 ---
 

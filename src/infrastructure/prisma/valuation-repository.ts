@@ -93,3 +93,32 @@ export async function getLatestValuesForAccountIds(
 	}
 	return map;
 }
+
+export async function updateValuation(
+	id: string,
+	data: { date?: Date; valuePaise?: number },
+): Promise<Valuation | null> {
+	const existing = await prisma.valuation.findUnique({ where: { id } });
+	if (!existing) return null;
+	const v = await prisma.valuation.update({
+		where: { id },
+		data: {
+			...(data.date !== undefined && { date: data.date }),
+			...(data.valuePaise !== undefined && { valuePaise: data.valuePaise }),
+		},
+	});
+	return {
+		id: v.id,
+		accountId: v.accountId,
+		date: v.date,
+		valuePaise: v.valuePaise,
+		createdAt: v.createdAt,
+	};
+}
+
+export async function deleteValuation(id: string): Promise<boolean> {
+	const existing = await prisma.valuation.findUnique({ where: { id } });
+	if (!existing) return false;
+	await prisma.valuation.delete({ where: { id } });
+	return true;
+}

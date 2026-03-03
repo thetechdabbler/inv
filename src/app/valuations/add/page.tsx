@@ -1,32 +1,32 @@
 "use client";
 
+import { PageTransition } from "@/components/PageTransition";
 import { RequireAuth } from "@/components/RequireAuth";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch, apiJson } from "@/lib/api";
-import { formatInr } from "@/lib/format";
+import { TYPE_COLORS } from "@/lib/constants";
+import { formatDate, formatInr, paiseToInr } from "@/lib/format";
 import type {
 	AccountHistoryResponse,
 	AccountListItem,
 	AccountsResponse,
 } from "@/types/api";
+import { ArrowLeft, Scale } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import useSWR, { useSWRConfig } from "swr";
 
-const TYPE_COLORS: Record<string, string> = {
-	stocks: "bg-blue-500",
-	mutual_fund: "bg-violet-500",
-	ppf: "bg-emerald-500",
-	epf: "bg-teal-500",
-	nps: "bg-amber-500",
-	bank_deposit: "bg-cyan-500",
-	gratuity: "bg-rose-500",
-};
-
 type FormData = {
 	date: string;
 	valueInr: number;
+	basicSalaryInr?: number;
+	joiningDate?: string;
 };
 
 function toPaise(inr: number): number {
@@ -34,6 +34,7 @@ function toPaise(inr: number): number {
 }
 
 function AddValuationContent() {
+	const searchParams = useSearchParams();
 	const [selectedAccountId, setSelectedAccountId] = useState<string | null>(
 		null,
 	);
@@ -46,6 +47,13 @@ function AddValuationContent() {
 		);
 
 	const accounts: AccountListItem[] = accountsData?.accounts ?? [];
+
+	useEffect(() => {
+		const accountId = searchParams.get("accountId");
+		if (!accountId || accounts.length === 0) return;
+		const found = accounts.some((a) => a.id === accountId);
+		if (found) setSelectedAccountId(accountId);
+	}, [searchParams, accounts]);
 
 	const selectedId = selectedAccountId ?? "";
 	const { data: historyData } = useSWR<AccountHistoryResponse>(
@@ -61,12 +69,115 @@ function AddValuationContent() {
 		register,
 		handleSubmit,
 		reset,
+		watch,
+		setValue,
 		formState: { errors },
 	} = useForm<FormData>({
 		defaultValues: {
 			date: new Date().toISOString().slice(0, 10),
+			valueInr: undefined as unknown as number,
+			basicSalaryInr: undefined,
+			joiningDate: undefined,
 		},
 	});
+
+	const selectedAccount = useMemo(
+		() => accounts.find((a) => a.id === selectedId) ?? null,
+		[accounts, selectedId],
+	);
+
+	const watchDate = watch("date");
+	const watchBasicSalary = watch("basicSalaryInr");
+	const watchJoiningDate = watch("joiningDate");
+
+	// Prefill gratuity helpers from employment info when available
+	useEffect(() => {
+		if (!selectedAccount || selectedAccount.type !== "gratuity") return;
+		if (!selectedId) return;
+		(async () => {
+			try {
+				const res = await apiFetch(
+					`/api/v1/employment-info/${encodeURIComponent(selectedId)}`,
+				);
+				if (!res.ok) return;
+				const info = (await res.json()) as {
+					basicSalaryInr: number | null;
+					joiningDate: string | null;
+				};
+				if (
+					info.basicSalaryInr != null &&
+					Number.isFinite(info.basicSalaryInr)
+				) {
+					setValue("basicSalaryInr", info.basicSalaryInr, {
+						shouldDirty: false,
+					});
+				}
+				if (info.joiningDate) {
+					setValue("joiningDate", info.joiningDate, { shouldDirty: false });
+				}
+			} catch {
+				// ignore fetch errors; form remains usable
+			}
+		})();
+	}, [selectedAccount, selectedId, setValue]);
+
+	// Pre-fill last used gratuity helper inputs per account
+	useEffect(() => {
+		if (!selectedAccount || selectedAccount.type !== "gratuity") return;
+		if (typeof window === "undefined") return;
+		const key = `gratuity-prefill:${selectedAccount.id}`;
+		const raw = window.localStorage.getItem(key);
+		if (!raw) return;
+		try {
+			const parsed = JSON.parse(raw) as {
+				basicSalaryInr?: number;
+				joiningDate?: string;
+			};
+			if (
+				parsed.basicSalaryInr != null &&
+				Number.isFinite(parsed.basicSalaryInr)
+			) {
+				setValue("basicSalaryInr", parsed.basicSalaryInr, {
+					shouldDirty: false,
+				});
+			}
+			if (parsed.joiningDate) {
+				setValue("joiningDate", parsed.joiningDate, { shouldDirty: false });
+			}
+		} catch {
+			// Ignore malformed localStorage
+		}
+	}, [selectedAccount, setValue]);
+
+	useEffect(() => {
+		if (!selectedAccount || selectedAccount.type !== "gratuity") return;
+		if (!watchDate || !watchJoiningDate) return;
+		const basicSalary = Number(watchBasicSalary);
+		if (!Number.isFinite(basicSalary) || basicSalary <= 0) return;
+		const join = new Date(watchJoiningDate);
+		const asOf = new Date(watchDate);
+		if (Number.isNaN(join.getTime()) || Number.isNaN(asOf.getTime())) return;
+		const diffMs = asOf.getTime() - join.getTime();
+		if (diffMs <= 0) return;
+		const yearsFloat = diffMs / (365.25 * 24 * 60 * 60 * 1000);
+		const years = Math.round(yearsFloat);
+		if (years <= 0) return;
+
+		// Gratuity formula aligned with backend helper: 15/26 * basic * years of service (rounded to nearest year)
+		const gratuity = (15 / 26) * basicSalary * years;
+		if (!Number.isFinite(gratuity) || gratuity <= 0) return;
+
+		setValue("valueInr", Number(gratuity.toFixed(2)), {
+			shouldValidate: true,
+			shouldDirty: true,
+		});
+	}, [
+		selectedAccount,
+		watchDate,
+		watchBasicSalary,
+		watchJoiningDate,
+		setValue,
+	]);
 
 	async function onSubmit(data: FormData) {
 		const valuePaise = toPaise(Number(data.valueInr));
@@ -93,9 +204,54 @@ function AddValuationContent() {
 				toast.error(j.message ?? "Failed to add valuation");
 				return;
 			}
+			// Optionally update employment info when gratuity helpers are present
+			if (
+				selectedAccount?.type === "gratuity" &&
+				(data.basicSalaryInr != null || data.joiningDate)
+			) {
+				try {
+					await apiFetch(
+						`/api/v1/employment-info/${encodeURIComponent(selectedAccountId)}`,
+						{
+							method: "PUT",
+							body: JSON.stringify({
+								basicSalaryInr:
+									data.basicSalaryInr != null
+										? Number(data.basicSalaryInr)
+										: null,
+								joiningDate: data.joiningDate || null,
+							}),
+						},
+					);
+				} catch {
+					// do not block valuation on employment-info failure
+				}
+			}
+			// Remember last gratuity helpers for this account
+			if (
+				selectedAccount?.type === "gratuity" &&
+				typeof window !== "undefined"
+			) {
+				const key = `gratuity-prefill:${selectedAccount.id}`;
+				const payload = {
+					basicSalaryInr:
+						data.basicSalaryInr != null
+							? Number(data.basicSalaryInr)
+							: undefined,
+					joiningDate: data.joiningDate || undefined,
+				};
+				try {
+					window.localStorage.setItem(key, JSON.stringify(payload));
+				} catch {
+					// Ignore storage errors
+				}
+			}
 			toast.success("Valuation added");
 			reset({
 				date: new Date().toISOString().slice(0, 10),
+				valueInr: undefined as unknown as number,
+				basicSalaryInr: undefined,
+				joiningDate: undefined,
 			});
 			mutate((key: unknown) => {
 				if (typeof key === "string") return key.includes("history");
@@ -115,8 +271,8 @@ function AddValuationContent() {
 	if (accLoading) {
 		return (
 			<div className="space-y-4">
-				<div className="h-8 w-48 animate-pulse rounded-lg bg-slate-200" />
-				<div className="h-64 animate-pulse rounded-xl bg-slate-200" />
+				<Skeleton className="h-8 w-48 rounded-lg" />
+				<Skeleton className="h-64 rounded-xl" />
 			</div>
 		);
 	}
@@ -125,71 +281,42 @@ function AddValuationContent() {
 		return (
 			<div className="space-y-6">
 				<div className="flex items-center gap-3">
-					<Link
-						href="/valuations"
-						className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
-					>
-						<svg
-							className="h-4 w-4"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-							aria-hidden="true"
-						>
-							<title>Back</title>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M15 19l-7-7 7-7"
-							/>
-						</svg>
-						Back
-					</Link>
-					<h1 className="text-2xl font-bold text-slate-800">Add Valuation</h1>
+					<Button variant="ghost" size="sm" asChild>
+						<Link href="/valuations">
+							<ArrowLeft className="h-4 w-4" />
+							Back
+						</Link>
+					</Button>
+					<h1 className="text-2xl font-bold text-foreground">Add Valuation</h1>
 				</div>
-				<div className="rounded-xl border-2 border-dashed border-slate-300 bg-white p-10 text-center">
-					<p className="text-slate-500">No accounts found.</p>
-					<p className="text-sm text-slate-400 mt-1">
-						Create an account first before adding valuations.
-					</p>
-				</div>
+				<Card className="border-dashed border-2">
+					<CardContent className="p-10 text-center">
+						<p className="text-muted-foreground">No accounts found.</p>
+						<p className="text-sm text-muted-foreground/70 mt-1">
+							Create an account first before adding valuations.
+						</p>
+					</CardContent>
+				</Card>
 			</div>
 		);
 	}
 
 	return (
-		<div className="space-y-6">
+		<PageTransition className="space-y-6">
 			<div className="flex items-center gap-3">
-				<Link
-					href="/valuations"
-					className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
-				>
-					<svg
-						className="h-4 w-4"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
-						aria-hidden="true"
-					>
-						<title>Back</title>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M15 19l-7-7 7-7"
-						/>
-					</svg>
-					Back
-				</Link>
-				<h1 className="text-2xl font-bold text-slate-800">Add Valuation</h1>
+				<Button variant="ghost" size="sm" asChild>
+					<Link href="/valuations">
+						<ArrowLeft className="h-4 w-4" />
+						Back
+					</Link>
+				</Button>
+				<h1 className="text-2xl font-bold text-foreground">Add Valuation</h1>
 			</div>
 
 			<div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-				{/* Account selector */}
-				<div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-					<div className="border-b border-slate-200 px-4 py-3">
-						<p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+				<Card>
+					<div className="border-b px-4 py-3">
+						<p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
 							Select Account
 						</p>
 					</div>
@@ -201,152 +328,177 @@ function AddValuationContent() {
 								onClick={() => setSelectedAccountId(a.id)}
 								className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-3 text-left text-sm transition-colors ${
 									selectedAccountId === a.id
-										? "bg-indigo-50 text-indigo-700 font-medium ring-1 ring-indigo-200"
-										: "text-slate-600 hover:bg-slate-50"
+										? "bg-primary/10 text-primary font-medium ring-1 ring-primary/20"
+										: "text-foreground hover:bg-muted"
 								}`}
 							>
 								<span
-									className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white text-xs font-bold ${TYPE_COLORS[a.type] ?? "bg-slate-400"}`}
+									className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white text-xs font-bold ${TYPE_COLORS[a.type] ?? "bg-muted-foreground"}`}
 								>
 									{a.name.slice(0, 2).toUpperCase()}
 								</span>
 								<div className="min-w-0">
 									<span className="block truncate">{a.name}</span>
-									<span className="block text-xs text-slate-400 capitalize">
+									<span className="block text-xs text-muted-foreground capitalize">
 										{a.type.replace("_", " ")}
 									</span>
 								</div>
 							</button>
 						))}
 					</div>
-				</div>
+				</Card>
 
-				{/* Form + recent valuations */}
 				<div className="space-y-6">
 					{!selectedAccountId ? (
-						<div className="flex items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white p-16">
-							<div className="text-center">
-								<svg
-									className="mx-auto h-10 w-10 text-slate-300"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-									aria-hidden="true"
-								>
-									<title>Select account</title>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={1.5}
-										d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"
-									/>
-								</svg>
-								<p className="mt-2 text-sm text-slate-400">
-									Select an account from the left to begin
-								</p>
-							</div>
-						</div>
+						<Card className="border-dashed border-2">
+							<CardContent className="flex items-center justify-center p-16">
+								<div className="text-center">
+									<Scale className="mx-auto h-10 w-10 text-muted-foreground/30" />
+									<p className="mt-2 text-sm text-muted-foreground">
+										Select an account from the left to begin
+									</p>
+								</div>
+							</CardContent>
+						</Card>
 					) : (
 						<>
-							<form
-								onSubmit={handleSubmit(onSubmit)}
-								className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-5"
-							>
-								<h2 className="font-semibold text-slate-800">New Valuation</h2>
-								<div className="grid gap-5 sm:grid-cols-2">
-									<div>
-										<label
-											className="block text-sm font-medium text-slate-600 mb-1.5"
-											htmlFor="val-date"
-										>
-											Date
-										</label>
-										<input
-											id="val-date"
-											type="date"
-											className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-											{...register("date", { required: true })}
-										/>
-									</div>
-									<div>
-										<label
-											className="block text-sm font-medium text-slate-600 mb-1.5"
-											htmlFor="val-amount"
-										>
-											Current Value (INR)
-										</label>
-										<input
-											id="val-amount"
-											type="number"
-											step="0.01"
-											min="0"
-											className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-											{...register("valueInr", {
-												required: true,
-												min: 0,
-											})}
-										/>
-										{errors.valueInr && (
-											<p className="mt-1 text-xs text-red-500">
-												Value must be &ge; 0
-											</p>
+							<Card>
+								<CardContent className="p-6">
+									<form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+										<h2 className="font-semibold text-foreground">
+											New Valuation
+										</h2>
+										<div className="grid gap-5 sm:grid-cols-2">
+											<div>
+												<label
+													className="block text-sm font-medium text-foreground mb-1.5"
+													htmlFor="val-date"
+												>
+													Date
+												</label>
+												<Input
+													id="val-date"
+													type="date"
+													{...register("date", { required: true })}
+												/>
+											</div>
+											<div>
+												<label
+													className="block text-sm font-medium text-foreground mb-1.5"
+													htmlFor="val-amount"
+												>
+													Current Value (INR)
+												</label>
+												<Input
+													id="val-amount"
+													type="number"
+													step="0.01"
+													min="0"
+													{...register("valueInr", {
+														required: true,
+														min: 0,
+													})}
+												/>
+												{errors.valueInr && (
+													<p className="mt-1 text-xs text-destructive">
+														Value must be &ge; 0
+													</p>
+												)}
+												{selectedAccount?.type === "gratuity" && (
+													<p className="mt-1 text-xs text-muted-foreground">
+														For gratuity accounts, value is typically based on
+														current basic salary and years of service; you can
+														use the helper fields below to auto-calculate and
+														adjust if needed.
+													</p>
+												)}
+											</div>
+										</div>
+										{selectedAccount?.type === "gratuity" && (
+											<div className="grid gap-5 sm:grid-cols-2 border-t pt-4 mt-2">
+												<div>
+													<label
+														className="block text-sm font-medium text-foreground mb-1.5"
+														htmlFor="basic-salary"
+													>
+														Current Basic Salary (INR)
+													</label>
+													<Input
+														id="basic-salary"
+														type="number"
+														step="0.01"
+														min="0"
+														{...register("basicSalaryInr", {
+															min: 0,
+														})}
+													/>
+												</div>
+												<div>
+													<label
+														className="block text-sm font-medium text-foreground mb-1.5"
+														htmlFor="joining-date"
+													>
+														Joining Date
+													</label>
+													<Input
+														id="joining-date"
+														type="date"
+														{...register("joiningDate")}
+													/>
+												</div>
+											</div>
 										)}
-									</div>
-								</div>
-								<div className="flex items-center gap-3 pt-1">
-									<button
-										type="submit"
-										disabled={submitting}
-										className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-									>
-										{submitting ? "Adding\u2026" : "Add Valuation"}
-									</button>
-									<Link
-										href="/valuations"
-										className="rounded-lg px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
-									>
-										Cancel
-									</Link>
-								</div>
-							</form>
+										<div className="flex items-center gap-3 pt-1">
+											<Button type="submit" disabled={submitting}>
+												{submitting ? "Adding\u2026" : "Add Valuation"}
+											</Button>
+											<Button variant="ghost" asChild>
+												<Link href="/valuations">Cancel</Link>
+											</Button>
+										</div>
+									</form>
+								</CardContent>
+							</Card>
 
-							<div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-								<div className="border-b border-slate-200 px-5 py-3">
-									<h2 className="font-semibold text-slate-700 text-sm">
+							<Card>
+								<div className="border-b px-5 py-3">
+									<h2 className="font-semibold text-foreground text-sm">
 										Recent Valuations &mdash;{" "}
 										{accounts.find((a) => a.id === selectedAccountId)?.name}
 									</h2>
 								</div>
 								{accountValuations.length === 0 ? (
-									<div className="px-5 py-8 text-center">
-										<p className="text-sm text-slate-400">
+									<CardContent className="py-8 text-center">
+										<p className="text-sm text-muted-foreground">
 											No valuations for this account yet.
 										</p>
-									</div>
+									</CardContent>
 								) : (
-									<div className="divide-y divide-slate-100">
+									<div className="divide-y">
 										{accountValuations.map((v, i) => (
 											<div
 												key={`${v.date}-${i}`}
 												className="flex items-center justify-between px-5 py-3"
 											>
 												<div className="flex items-center gap-3">
-													<span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold">
+													<span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
 														&#x2139;
 													</span>
 													<div>
-														<p className="text-sm font-medium text-slate-700">
+														<p className="text-sm font-medium text-foreground">
 															Valuation
 														</p>
-														<p className="text-xs text-slate-400">{v.date}</p>
+														<p className="text-xs text-muted-foreground">
+															{formatDate(v.date)}
+														</p>
 													</div>
 												</div>
 												<div className="text-right">
-													<p className="text-sm font-semibold text-indigo-600">
+													<p className="text-sm font-semibold text-primary">
 														{formatInr(v.amountOrValuePaise)}
 													</p>
 													{v.description && (
-														<p className="text-xs text-slate-400 truncate max-w-[150px]">
+														<p className="text-xs text-muted-foreground truncate max-w-[150px]">
 															{v.description}
 														</p>
 													)}
@@ -355,12 +507,12 @@ function AddValuationContent() {
 										))}
 									</div>
 								)}
-							</div>
+							</Card>
 						</>
 					)}
 				</div>
 			</div>
-		</div>
+		</PageTransition>
 	);
 }
 

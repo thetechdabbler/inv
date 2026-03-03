@@ -19,6 +19,8 @@ export interface Account {
 	name: string;
 	description: string | null;
 	initialBalancePaise: number;
+	expectedRatePercent?: number | null;
+	expectedMonthlyInvestPaise?: number | null;
 	createdAt: Date;
 	updatedAt: Date;
 }
@@ -33,12 +35,16 @@ export interface CreateAccountInput {
 	name: string;
 	description?: string | null;
 	initialBalancePaise: number;
+	expectedRatePercent?: number | null;
+	expectedMonthlyInvestPaise?: number | null;
 }
 
 export interface UpdateAccountInput {
 	name?: string;
 	description?: string | null;
 	type?: AccountType;
+	expectedRatePercent?: number | null;
+	expectedMonthlyInvestPaise?: number | null;
 }
 
 export const ACCOUNT_TYPES: AccountType[] = [
@@ -80,6 +86,7 @@ export interface Valuation {
 }
 
 export interface HistoryEntry {
+	id: string;
 	date: string;
 	type: "investment" | "withdrawal" | "valuation";
 	amountOrValuePaise: number;

@@ -1,93 +1,82 @@
 "use client";
 
 import { apiFetch } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import {
+	BarChart3,
+	Database,
+	DollarSign,
+	FileSpreadsheet,
+	Home,
+	Lightbulb,
+	LogOut,
+	Menu,
+	TrendingUp,
+	UserCircle2,
+	X,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import type { ElementType } from "react";
+import { useEffect, useRef, useState } from "react";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "./ThemeToggle";
 
-const NAV_LINKS = [
-	{
-		href: "/dashboard",
-		label: "Dashboard",
-		icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1",
-	},
-	{
-		href: "/accounts",
-		label: "Accounts",
-		icon: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4",
-	},
-	{
-		href: "/transactions",
-		label: "Transactions",
-		icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
-	},
-	{
-		href: "/valuations",
-		label: "Valuations",
-		icon: "M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z",
-	},
-	{
-		href: "/charts",
-		label: "Charts",
-		icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
-	},
-	{
-		href: "/insights",
-		label: "AI Insights",
-		icon: "M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",
-	},
-	{
-		href: "/data",
-		label: "Import / Export",
-		icon: "M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7M4 7c0-2 1-3 3-3h10c2 0 3 1 3 3M4 7h16M8 11h2m4 0h2M8 15h2m4 0h2",
-	},
-];
-
-function NavIcon({ d }: { d: string }) {
-	return (
-		<svg
-			className="h-4 w-4 shrink-0"
-			fill="none"
-			stroke="currentColor"
-			viewBox="0 0 24 24"
-			aria-hidden="true"
-		>
-			<title>nav</title>
-			<path
-				strokeLinecap="round"
-				strokeLinejoin="round"
-				strokeWidth={1.5}
-				d={d}
-			/>
-		</svg>
-	);
+interface NavItem {
+	href: string;
+	label: string;
+	icon: ElementType;
 }
+
+const NAV_LINKS: NavItem[] = [
+	{ href: "/dashboard", label: "Dashboard", icon: Home },
+	{ href: "/accounts", label: "Accounts", icon: TrendingUp },
+	{ href: "/employment", label: "Employment", icon: UserCircle2 },
+	{ href: "/transactions", label: "Transactions", icon: DollarSign },
+	{ href: "/valuations", label: "Valuations", icon: FileSpreadsheet },
+	{ href: "/charts", label: "Charts", icon: BarChart3 },
+	{ href: "/insights", label: "AI Insights", icon: Lightbulb },
+	{ href: "/data", label: "Import / Export", icon: Database },
+];
 
 function NavLink({
 	href,
 	label,
-	icon,
+	icon: Icon,
 	active,
 	onClick,
-}: {
-	href: string;
-	label: string;
-	icon: string;
-	active: boolean;
-	onClick?: () => void;
-}) {
+}: NavItem & { active: boolean; onClick?: () => void }) {
 	return (
 		<Link
 			href={href}
 			onClick={onClick}
-			className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
+			className={cn(
+				"group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-200",
 				active
-					? "bg-white/15 font-medium text-white"
-					: "text-indigo-200 hover:bg-white/10 hover:text-white"
-			}`}
+					? "text-sidebar-accent-foreground font-medium bg-sidebar-accent/10"
+					: "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/5",
+			)}
 		>
-			<NavIcon d={icon} />
-			{label}
+			{active && (
+				<span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-r-full bg-sidebar-accent dark:glow-border" />
+			)}
+			<Icon
+				className={cn(
+					"h-4 w-4 shrink-0 transition-colors duration-200",
+					active
+						? "text-sidebar-accent"
+						: "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/80",
+				)}
+			/>
+			<span>{label}</span>
 		</Link>
 	);
 }
@@ -96,6 +85,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 	const router = useRouter();
 	const pathname = usePathname();
 	const [mobileOpen, setMobileOpen] = useState(false);
+	const [logoutOpen, setLogoutOpen] = useState(false);
+	const drawerRef = useRef<HTMLDivElement | null>(null);
 
 	async function handleLogout() {
 		await apiFetch("/api/v1/auth/logout", { method: "POST" }).catch(() => {});
@@ -103,51 +94,83 @@ export function Layout({ children }: { children: React.ReactNode }) {
 		router.refresh();
 	}
 
+	useEffect(() => {
+		if (mobileOpen && drawerRef.current) {
+			const drawer = drawerRef.current;
+			const focusable = drawer.querySelectorAll<HTMLElement>(
+				'a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])',
+			);
+			focusable[0]?.focus();
+		}
+	}, [mobileOpen]);
+
+	function handleDrawerKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+		if (e.key === "Escape") {
+			e.stopPropagation();
+			setMobileOpen(false);
+			return;
+		}
+		if (e.key !== "Tab") return;
+		const drawer = drawerRef.current;
+		if (!drawer) return;
+		const focusable = drawer.querySelectorAll<HTMLElement>(
+			'a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])',
+		);
+		if (focusable.length === 0) return;
+		const first = focusable[0];
+		const last = focusable[focusable.length - 1];
+		if (e.shiftKey) {
+			if (document.activeElement === first) {
+				e.preventDefault();
+				last.focus();
+			}
+		} else if (document.activeElement === last) {
+			e.preventDefault();
+			first.focus();
+		}
+	}
+
 	const sidebarContent = (
 		<>
+			{/* Logo */}
 			<div className="px-5 py-5">
-				<div className="flex items-center gap-2">
-					<div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20">
-						<svg
-							className="h-4 w-4 text-white"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-							aria-hidden="true"
-						>
-							<title>logo</title>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-							/>
-						</svg>
+				<div className="flex items-center gap-2.5">
+					<div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 dark:bg-sidebar-accent/15">
+						<TrendingUp className="h-4 w-4 text-primary dark:text-sidebar-accent" />
 					</div>
-					<span className="font-semibold text-white text-sm tracking-wide">
+					<span className="font-semibold text-sm tracking-wide text-sidebar-foreground">
 						InvestTrack
 					</span>
 				</div>
 			</div>
+
+			{/* Navigation */}
 			<nav className="flex-1 overflow-y-auto px-3 flex flex-col gap-0.5">
 				{NAV_LINKS.map((l) => (
 					<NavLink
 						key={l.href}
-						href={l.href}
-						label={l.label}
-						icon={l.icon}
-						active={pathname === l.href}
+						{...l}
+						active={
+							l.href === "/dashboard"
+								? pathname === "/dashboard"
+								: pathname.startsWith(l.href)
+						}
 						onClick={mobileOpen ? () => setMobileOpen(false) : undefined}
 					/>
 				))}
 			</nav>
-			<div className="p-3 border-t border-white/10">
+
+			{/* Bottom section */}
+			<div className="p-3 space-y-2 border-t border-sidebar-border">
+				<div className="px-3 py-1">
+					<ThemeToggle />
+				</div>
 				<button
 					type="button"
-					onClick={handleLogout}
-					className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-indigo-300 hover:bg-white/10 hover:text-white transition-colors"
+					onClick={() => setLogoutOpen(true)}
+					className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/5 transition-all duration-200"
 				>
-					<NavIcon d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+					<LogOut className="h-4 w-4" />
 					Logout
 				</button>
 			</div>
@@ -155,55 +178,35 @@ export function Layout({ children }: { children: React.ReactNode }) {
 	);
 
 	return (
-		<div className="min-h-screen bg-slate-50">
+		<div className="min-h-screen bg-background">
 			{/* Desktop sidebar */}
-			<aside className="hidden lg:flex lg:fixed lg:inset-y-0 lg:left-0 lg:w-56 flex-col bg-gradient-to-b from-indigo-900 to-indigo-950 z-30">
+			<aside
+				className={cn(
+					"hidden lg:flex lg:fixed lg:inset-y-0 lg:left-0 lg:w-56 flex-col z-30",
+					"bg-sidebar border-r border-sidebar-border",
+					"dark:backdrop-blur-xl dark:bg-sidebar/80 dark:border-sidebar-accent/10 dark:shadow-[1px_0_15px_-3px_hsl(var(--sidebar-accent)/0.15)]",
+				)}
+			>
 				{sidebarContent}
 			</aside>
 
 			{/* Mobile top bar */}
-			<header className="lg:hidden sticky top-0 z-30 bg-indigo-900 px-4 py-3 flex items-center justify-between shadow-md">
-				<div className="flex items-center gap-2">
-					<div className="flex h-7 w-7 items-center justify-center rounded-md bg-white/20">
-						<svg
-							className="h-3.5 w-3.5 text-white"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-							aria-hidden="true"
-						>
-							<title>logo</title>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-							/>
-						</svg>
+			<header className="lg:hidden sticky top-0 z-30 bg-sidebar border-b border-sidebar-border px-4 py-3 flex items-center justify-between dark:backdrop-blur-xl dark:bg-sidebar/80">
+				<div className="flex items-center gap-2.5">
+					<div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 dark:bg-sidebar-accent/15">
+						<TrendingUp className="h-3.5 w-3.5 text-primary dark:text-sidebar-accent" />
 					</div>
-					<span className="font-semibold text-white text-sm">InvestTrack</span>
+					<span className="font-semibold text-sidebar-foreground text-sm">
+						InvestTrack
+					</span>
 				</div>
 				<button
 					type="button"
 					onClick={() => setMobileOpen(true)}
-					className="rounded-md p-1.5 hover:bg-white/10 transition-colors"
+					className="rounded-md p-1.5 hover:bg-sidebar-accent/10 transition-colors"
 					aria-label="Open navigation"
 				>
-					<svg
-						className="h-5 w-5 text-indigo-200"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
-						aria-hidden="true"
-					>
-						<title>Open menu</title>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M4 6h16M4 12h16M4 18h16"
-						/>
-					</svg>
+					<Menu className="h-5 w-5 text-sidebar-foreground/70" />
 				</button>
 			</header>
 
@@ -211,81 +214,61 @@ export function Layout({ children }: { children: React.ReactNode }) {
 			{mobileOpen && (
 				<div className="lg:hidden fixed inset-0 z-50">
 					<div
-						className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-						role="button"
-						tabIndex={0}
-						aria-label="Close navigation overlay"
+						className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+						role="presentation"
+						aria-hidden="true"
 						onClick={() => setMobileOpen(false)}
-						onKeyDown={(e) => {
-							if (e.key === "Enter" || e.key === " ") setMobileOpen(false);
-						}}
 					/>
-					<aside className="absolute left-0 top-0 bottom-0 w-64 bg-gradient-to-b from-indigo-900 to-indigo-950 flex flex-col shadow-2xl">
+					<aside
+						ref={drawerRef}
+						className="absolute left-0 top-0 bottom-0 w-64 bg-sidebar flex flex-col shadow-2xl dark:bg-sidebar/95 dark:backdrop-blur-xl dark:border-r dark:border-sidebar-accent/10"
+						role="dialog"
+						aria-modal="true"
+						aria-label="Mobile navigation"
+						onKeyDown={handleDrawerKeyDown}
+					>
 						<div className="flex items-center justify-between px-5 py-5">
-							<div className="flex items-center gap-2">
-								<div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20">
-									<svg
-										className="h-4 w-4 text-white"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-										aria-hidden="true"
-									>
-										<title>logo</title>
-										<path
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											strokeWidth={2}
-											d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-										/>
-									</svg>
+							<div className="flex items-center gap-2.5">
+								<div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 dark:bg-sidebar-accent/15">
+									<TrendingUp className="h-4 w-4 text-primary dark:text-sidebar-accent" />
 								</div>
-								<span className="font-semibold text-white text-sm">
+								<span className="font-semibold text-sidebar-foreground text-sm">
 									InvestTrack
 								</span>
 							</div>
 							<button
 								type="button"
 								onClick={() => setMobileOpen(false)}
-								className="rounded-md p-1 hover:bg-white/10 transition-colors"
+								className="rounded-md p-1 hover:bg-sidebar-accent/10 transition-colors"
 								aria-label="Close navigation"
 							>
-								<svg
-									className="h-5 w-5 text-indigo-300"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-									aria-hidden="true"
-								>
-									<title>Close menu</title>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M6 18L18 6M6 6l12 12"
-									/>
-								</svg>
+								<X className="h-5 w-5 text-sidebar-foreground/60" />
 							</button>
 						</div>
 						<nav className="flex-1 overflow-y-auto px-3 flex flex-col gap-0.5">
 							{NAV_LINKS.map((l) => (
 								<NavLink
 									key={l.href}
-									href={l.href}
-									label={l.label}
-									icon={l.icon}
-									active={pathname === l.href}
+									{...l}
+									active={
+										l.href === "/dashboard"
+											? pathname === "/dashboard"
+											: pathname.startsWith(l.href)
+									}
 									onClick={() => setMobileOpen(false)}
 								/>
 							))}
 						</nav>
-						<div className="p-3 border-t border-white/10">
+						<div className="p-3 space-y-2 border-t border-sidebar-border">
+							<div className="px-3 py-1">
+								<ThemeToggle />
+							</div>
 							<button
 								type="button"
-								onClick={handleLogout}
-								className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-indigo-300 hover:bg-white/10 hover:text-white transition-colors"
+									onClick={() => setLogoutOpen(true)}
+								className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/5 transition-all duration-200"
 							>
-								<NavIcon d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+								<LogOut className="h-4 w-4" />
 								Logout
 							</button>
 						</div>
@@ -299,6 +282,36 @@ export function Layout({ children }: { children: React.ReactNode }) {
 					{children}
 				</div>
 			</main>
+
+			<Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+				<DialogContent className="sm:max-w-sm">
+					<DialogHeader>
+						<DialogTitle>Log out?</DialogTitle>
+						<DialogDescription>
+							Are you sure you want to log out of InvestTrack?
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter className="gap-2 sm:gap-0">
+						<Button
+							variant="outline"
+							onClick={() => setLogoutOpen(false)}
+							type="button"
+						>
+							Cancel
+						</Button>
+						<Button
+							variant="destructive"
+							type="button"
+							onClick={() => {
+								setLogoutOpen(false);
+								void handleLogout();
+							}}
+						>
+							Log out
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

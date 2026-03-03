@@ -17,11 +17,14 @@ model Account {
   name                 String
   description          String?
   initialBalancePaise  Int           @map("initial_balance_paise")
+  expectedRatePercent  Float?        @map("expected_rate_percent") // expected annual return (%)
+  expectedMonthlyInvest Int?         @map("expected_monthly_invest") // expected monthly investment (paise)
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
   transactions         Transaction[]
   valuations           Valuation[]
   marketConfig         AccountMarketConfig?
+  employmentInfo       EmploymentInfo?
 
   @@index([type])
   @@map("accounts")
@@ -51,6 +54,21 @@ model Valuation {
 
   @@index([accountId, date])
   @@map("valuations")
+}
+
+// Employment setup info per account (for gratuity and future employment fields)
+model EmploymentInfo {
+  id             String   @id @default(cuid())
+  accountId      String   @unique @map("account_id")
+  employerName   String?  @map("employer_name")
+  basicSalaryInr Float?   @map("basic_salary_inr")
+  vpfAmountInr   Float?   @map("vpf_amount_inr")
+  joiningDate    DateTime? @map("joining_date")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  account        Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("employment_info")
 }
 
 // Bolt 003: PPF/EPF rate per financial year; deposit rate/frequency per account

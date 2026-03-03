@@ -1,31 +1,27 @@
 "use client";
 
+import { PageTransition } from "@/components/PageTransition";
 import { RequireAuth } from "@/components/RequireAuth";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiJson } from "@/lib/api";
+import { TYPE_GRADIENTS as TYPE_COLORS } from "@/lib/constants";
 import { formatIndian, formatInr } from "@/lib/format";
 import type { AccountListItem, AccountsResponse } from "@/types/api";
+import { Plus } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import useSWR from "swr";
-
-const TYPE_COLORS: Record<string, string> = {
-	stocks: "from-blue-500 to-blue-600",
-	mutual_fund: "from-violet-500 to-violet-600",
-	ppf: "from-emerald-500 to-emerald-600",
-	epf: "from-teal-500 to-teal-600",
-	nps: "from-amber-500 to-amber-600",
-	bank_deposit: "from-cyan-500 to-cyan-600",
-	gratuity: "from-rose-500 to-rose-600",
-};
-
-const TYPE_BG: Record<string, string> = {
-	stocks: "bg-blue-50 text-blue-700 border-blue-200",
-	mutual_fund: "bg-violet-50 text-violet-700 border-violet-200",
-	ppf: "bg-emerald-50 text-emerald-700 border-emerald-200",
-	epf: "bg-teal-50 text-teal-700 border-teal-200",
-	nps: "bg-amber-50 text-amber-700 border-amber-200",
-	bank_deposit: "bg-cyan-50 text-cyan-700 border-cyan-200",
-	gratuity: "bg-rose-50 text-rose-700 border-rose-200",
-};
 
 function AccountTile({ account }: { account: AccountListItem }) {
 	const currentValue = account.currentValuePaise ?? account.initialBalancePaise;
@@ -36,78 +32,76 @@ function AccountTile({ account }: { account: AccountListItem }) {
 	const isPositive = pl >= 0;
 
 	return (
-		<Link
-			href={`/accounts/${account.id}/edit`}
-			className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-lg hover:border-indigo-300 transition-all duration-200"
-		>
-			<div
-				className={`h-1.5 bg-gradient-to-r ${TYPE_COLORS[account.type] ?? "from-slate-400 to-slate-500"}`}
-			/>
-
-			<div className="p-5">
-				<div className="flex items-start justify-between mb-4">
-					<div className="flex items-center gap-3">
-						<div
-							className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br text-white text-sm font-bold shadow-sm ${TYPE_COLORS[account.type] ?? "from-slate-400 to-slate-500"}`}
+		<Link href={`/accounts/${account.id}`} className="group block">
+			<Card className="relative overflow-hidden hover:shadow-lg hover:border-primary/30 motion-safe:hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200">
+				<div
+					className={`h-1.5 bg-gradient-to-r ${TYPE_COLORS[account.type] ?? "from-muted-foreground to-muted-foreground"}`}
+				/>
+				<CardContent className="p-5">
+					<div className="flex items-start justify-between mb-4">
+						<div className="flex items-center gap-3">
+							<div
+								className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br text-white text-sm font-bold shadow-sm ${TYPE_COLORS[account.type] ?? "from-muted-foreground to-muted-foreground"}`}
+							>
+								{account.name.slice(0, 2).toUpperCase()}
+							</div>
+							<div>
+								<h3 className="font-semibold text-card-foreground group-hover:text-primary transition-colors">
+									{account.name}
+								</h3>
+								<Badge variant="outline" className="mt-0.5 capitalize text-xs">
+									{account.type.replace(/_/g, " ")}
+								</Badge>
+							</div>
+						</div>
+						<Badge
+							variant="outline"
+							className={`text-xs ${
+								isPositive
+									? "text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
+									: "text-red-500 dark:text-red-400 border-red-200 dark:border-red-800"
+							}`}
 						>
-							{account.name.slice(0, 2).toUpperCase()}
+							{isPositive ? "\u2191" : "\u2193"}{" "}
+							{Math.abs(pctReturn).toFixed(1)}%
+						</Badge>
+					</div>
+
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+								Current Value
+							</p>
+							<p className="mt-0.5 text-lg font-bold text-card-foreground">
+								{formatIndian(currentValue)}
+							</p>
 						</div>
 						<div>
-							<h3 className="font-semibold text-slate-800 group-hover:text-indigo-700 transition-colors">
-								{account.name}
-							</h3>
-							<span
-								className={`inline-block mt-0.5 rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${TYPE_BG[account.type] ?? "bg-slate-50 text-slate-600 border-slate-200"}`}
-							>
-								{account.type.replace(/_/g, " ")}
-							</span>
+							<p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+								Invested
+							</p>
+							<p className="mt-0.5 text-lg font-semibold text-muted-foreground">
+								{formatIndian(invested)}
+							</p>
 						</div>
 					</div>
-					<div
-						className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-							isPositive
-								? "bg-emerald-50 text-emerald-700"
-								: "bg-red-50 text-red-600"
-						}`}
-					>
-						{isPositive ? "\u2191" : "\u2193"} {Math.abs(pctReturn).toFixed(1)}%
-					</div>
-				</div>
 
-				<div className="grid grid-cols-2 gap-4">
-					<div>
-						<p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-							Current Value
-						</p>
-						<p className="mt-0.5 text-lg font-bold text-slate-800">
-							{formatIndian(currentValue)}
-						</p>
-					</div>
-					<div>
-						<p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-							Invested
-						</p>
-						<p className="mt-0.5 text-lg font-semibold text-slate-600">
-							{formatIndian(invested)}
-						</p>
-					</div>
-				</div>
-
-				<div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
-					<div>
-						<span className="text-xs text-slate-400">P&L</span>
-						<span
-							className={`ml-2 text-sm font-semibold ${isPositive ? "text-emerald-600" : "text-red-500"}`}
-						>
-							{isPositive ? "+" : ""}
-							{formatInr(pl)}
+					<div className="mt-4 pt-4 border-t flex items-center justify-between">
+						<div>
+							<span className="text-xs text-muted-foreground">P&L</span>
+							<span
+								className={`ml-2 text-sm font-semibold ${isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}
+							>
+								{isPositive ? "+" : ""}
+								{formatInr(pl)}
+							</span>
+						</div>
+						<span className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
+							View &rarr;
 						</span>
 					</div>
-					<span className="text-xs text-slate-400 group-hover:text-indigo-500 transition-colors">
-						Edit &rarr;
-					</span>
-				</div>
-			</div>
+				</CardContent>
+			</Card>
 		</Link>
 	);
 }
@@ -118,11 +112,20 @@ function AccountsList() {
 		(url: string) => apiJson<AccountsResponse>(url),
 	);
 
+	const [query, setQuery] = useState("");
+	const [sortBy, setSortBy] = useState<"value" | "name" | "type" | "returns">(
+		"value",
+	);
+
 	if (error) {
 		return (
-			<div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
-				<p className="text-red-700 font-medium">Failed to load accounts.</p>
-			</div>
+			<Card className="border-destructive/50 bg-destructive/5">
+				<CardContent className="p-6 text-center">
+					<p className="text-destructive font-medium">
+						Failed to load accounts.
+					</p>
+				</CardContent>
+			</Card>
 		);
 	}
 
@@ -130,7 +133,7 @@ function AccountsList() {
 		return (
 			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 				{[1, 2, 3].map((i) => (
-					<div key={i} className="h-52 animate-pulse rounded-xl bg-slate-200" />
+					<Skeleton key={i} className="h-52 rounded-xl" />
 				))}
 			</div>
 		);
@@ -138,58 +141,120 @@ function AccountsList() {
 
 	const accounts = data.accounts;
 
+	const filteredAccounts = accounts
+		.filter((a) =>
+			query.trim()
+				? a.name.toLowerCase().includes(query.trim().toLowerCase())
+				: true,
+		)
+		.sort((a, b) => {
+			const aCurrent = a.currentValuePaise ?? a.initialBalancePaise;
+			const bCurrent = b.currentValuePaise ?? b.initialBalancePaise;
+			const aInvested =
+				a.initialBalancePaise + (a.totalContributionsPaise ?? 0);
+			const bInvested =
+				b.initialBalancePaise + (b.totalContributionsPaise ?? 0);
+			const aReturn =
+				aInvested > 0 ? (aCurrent - aInvested) / aInvested : 0;
+			const bReturn =
+				bInvested > 0 ? (bCurrent - bInvested) / bInvested : 0;
+
+			switch (sortBy) {
+				case "name":
+					return a.name.localeCompare(b.name);
+				case "type":
+					return a.type.localeCompare(b.type);
+				case "returns":
+					return bReturn - aReturn;
+				case "value":
+				default:
+					return bCurrent - aCurrent;
+			}
+		});
+
 	return (
-		<div className="space-y-6">
+		<PageTransition className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-slate-800">Accounts</h1>
-					<p className="text-sm text-slate-400 mt-1">
+					<h1 className="text-2xl font-bold text-foreground">Accounts</h1>
+					<p className="text-sm text-muted-foreground mt-1">
 						{accounts.length} account{accounts.length !== 1 ? "s" : ""}
 					</p>
 				</div>
-				<Link
-					href="/accounts/new"
-					className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 transition-colors"
-				>
-					<svg
-						className="h-4 w-4"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
-						aria-hidden="true"
-					>
-						<title>Add</title>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-						/>
-					</svg>
-					Add account
-				</Link>
+				<Button asChild>
+					<Link href="/accounts/new">
+						<Plus className="h-4 w-4" />
+						Add account
+					</Link>
+				</Button>
 			</div>
 
-			{accounts.length === 0 ? (
-				<div className="rounded-xl border-2 border-dashed border-slate-300 bg-white p-10 text-center">
-					<p className="text-slate-500">
-						No accounts yet. Create one to get started.
-					</p>
-				</div>
-			) : (
-				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-					{accounts
-						.sort(
-							(a, b) =>
-								(b.currentValuePaise ?? b.initialBalancePaise) -
-								(a.currentValuePaise ?? a.initialBalancePaise),
-						)
-						.map((a) => (
-							<AccountTile key={a.id} account={a} />
-						))}
+			{accounts.length > 0 && (
+				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+					<div className="flex-1 max-w-sm">
+						<Input
+							placeholder="Search accounts…"
+							value={query}
+							onChange={(e) => setQuery(e.target.value)}
+							className="h-9 text-sm"
+						/>
+					</div>
+					<div className="flex items-center gap-2">
+						<span className="text-xs font-medium text-muted-foreground">
+							Sort by
+						</span>
+						<Select
+							value={sortBy}
+							onValueChange={(value) =>
+								setSortBy(
+									value as "value" | "name" | "type" | "returns",
+								)
+							}
+						>
+							<SelectTrigger className="h-9 w-32 text-xs">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="value">Value</SelectItem>
+								<SelectItem value="name">Name</SelectItem>
+								<SelectItem value="type">Type</SelectItem>
+								<SelectItem value="returns">Returns</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
 				</div>
 			)}
-		</div>
+
+			{accounts.length === 0 ? (
+				<Card className="border-dashed border-2">
+					<CardContent className="p-10 text-center">
+						<p className="text-muted-foreground">
+							No accounts yet. Create one to get started.
+						</p>
+					</CardContent>
+				</Card>
+			) : filteredAccounts.length === 0 ? (
+				<Card className="border-dashed border-2">
+					<CardContent className="p-10 text-center">
+						<p className="text-muted-foreground">
+							No accounts match your current search or sort.
+						</p>
+					</CardContent>
+				</Card>
+			) : (
+				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+					{filteredAccounts.map((a, i) => (
+						<div
+							key={a.id}
+							className="motion-safe:animate-slide-up stagger-item"
+							style={{ "--stagger": i } as React.CSSProperties}
+						>
+							<AccountTile account={a} />
+						</div>
+					))}
+				</div>
+			)}
+		</PageTransition>
 	);
 }
 

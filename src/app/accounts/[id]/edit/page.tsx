@@ -13,6 +13,15 @@ type FormData = {
 	type: AccountType;
 	name: string;
 	description: string;
+	expectedRatePercent?: number | null;
+	expectedMonthlyInvestInr?: number | null;
+};
+
+type EmploymentFormData = {
+	employerName: string;
+	basicSalaryInr: number | undefined;
+	vpfAmountInr: number | undefined;
+	joiningDate: string;
 };
 
 export default function EditAccountPage() {
@@ -22,6 +31,15 @@ export default function EditAccountPage() {
 	const [loading, setLoading] = useState(true);
 	const [submitting, setSubmitting] = useState(false);
 	const [deleteConfirm, setDeleteConfirm] = useState(false);
+	const [accountType, setAccountType] = useState<AccountType | null>(null);
+
+	const {
+		register: registerEmployment,
+		handleSubmit: handleSubmitEmployment,
+		reset: resetEmployment,
+		watch: watchEmployment,
+		formState: { isSubmitting: employmentSubmitting },
+	} = useForm<EmploymentFormData>();
 
 	const {
 		register,
@@ -43,11 +61,24 @@ export default function EditAccountPage() {
 					type: string;
 					name: string;
 					description: string | null;
+					expectedRatePercent?: number | null;
+					expectedMonthlyInvestPaise?: number | null;
 				};
 				if (!cancelled) {
-					setValue("type", data.type as AccountType);
+					const t = data.type as AccountType;
+					setAccountType(t);
+					setValue("type", t);
 					setValue("name", data.name);
 					setValue("description", data.description ?? "");
+					if (data.expectedRatePercent != null) {
+						setValue("expectedRatePercent", data.expectedRatePercent);
+					}
+					if (data.expectedMonthlyInvestPaise != null) {
+						setValue(
+							"expectedMonthlyInvestInr",
+							data.expectedMonthlyInvestPaise / 100,
+						);
+					}
 				}
 			} catch {
 				if (!cancelled) toast.error("Failed to load account");
@@ -60,15 +91,57 @@ export default function EditAccountPage() {
 		};
 	}, [id, setValue, router]);
 
+	useEffect(() => {
+		let cancelled = false;
+		(async () => {
+			if (!accountType || accountType !== "gratuity") return;
+			try {
+				const res = await apiFetch(
+					`/api/v1/employment-info/${encodeURIComponent(id)}`,
+				);
+				if (!res.ok) return;
+				const info = (await res.json()) as {
+					employerName: string | null;
+					basicSalaryInr: number | null;
+					vpfAmountInr: number | null;
+					joiningDate: string | null;
+				};
+				if (cancelled) return;
+				resetEmployment({
+					employerName: info.employerName ?? "",
+					basicSalaryInr: info.basicSalaryInr ?? undefined,
+					vpfAmountInr: info.vpfAmountInr ?? undefined,
+					joiningDate: info.joiningDate ?? "",
+				});
+			} catch {
+				if (!cancelled) {
+					toast.error("Failed to load employment info");
+				}
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [accountType, id, resetEmployment]);
+
 	async function onSubmit(data: FormData) {
 		setSubmitting(true);
 		try {
+			const expectedMonthlyPaise =
+				data.expectedMonthlyInvestInr != null
+					? Math.round(Number(data.expectedMonthlyInvestInr) * 100)
+					: null;
 			const res = await apiFetch(`/api/v1/accounts/${id}`, {
 				method: "PATCH",
 				body: JSON.stringify({
 					type: data.type,
 					name: data.name.trim(),
 					description: data.description.trim() || null,
+					expectedRatePercent:
+						data.expectedRatePercent != null
+							? Number(data.expectedRatePercent)
+							: null,
+					expectedMonthlyInvestPaise: expectedMonthlyPaise,
 				}),
 			});
 			if (!res.ok) {
@@ -85,6 +158,48 @@ export default function EditAccountPage() {
 			setSubmitting(false);
 		}
 	}
+
+	async function onSubmitEmployment(data: EmploymentFormData) {
+		if (accountType !== "gratuity") return;
+		try {
+			const res = await apiFetch(
+				`/api/v1/employment-info/${encodeURIComponent(id)}`,
+				{
+					method: "PUT",
+					body: JSON.stringify({
+						employerName: data.employerName.trim() || null,
+						basicSalaryInr:
+							data.basicSalaryInr != null
+								? Number(data.basicSalaryInr)
+								: null,
+						vpfAmountInr:
+							data.vpfAmountInr != null ? Number(data.vpfAmountInr) : null,
+						joiningDate: data.joiningDate || null,
+					}),
+				},
+			);
+			if (!res.ok) {
+				const j = (await res.json()) as { message?: string };
+				toast.error(j.message ?? "Failed to save employment info");
+				return;
+			}
+			toast.success("Employment info saved");
+		} catch {
+			toast.error("Failed to save employment info");
+		}
+	}
+
+	const employmentBasic = watchEmployment("basicSalaryInr");
+	const employmentVpf = watchEmployment("vpfAmountInr");
+	const projectedMonthlyEpf = (() => {
+		const basic = Number(employmentBasic) || 0;
+		const vpf = Number(employmentVpf) || 0;
+		if (basic <= 0 && vpf <= 0) return null;
+		// Round the 12% employee contribution first, then derive totals
+		const roundedTwelvePercent = Math.round(0.12 * basic);
+		const totalEpf = roundedTwelvePercent * 2 + vpf - 1250;
+		return totalEpf;
+	})();
 
 	async function handleDelete() {
 		if (!deleteConfirm) {
@@ -175,6 +290,38 @@ export default function EditAccountPage() {
 							{...register("description")}
 						/>
 					</div>
+					<div>
+						<label
+							className="block text-sm text-gray-600"
+							htmlFor="expectedRatePercent"
+						>
+							Expected rate of return (% p.a.)
+						</label>
+						<input
+							id="expectedRatePercent"
+							type="number"
+							step="0.01"
+							min="0"
+							className="mt-1 w-full rounded border px-3 py-2"
+							{...register("expectedRatePercent")}
+						/>
+					</div>
+					<div>
+						<label
+							className="block text-sm text-gray-600"
+							htmlFor="expectedMonthlyInvestInr"
+						>
+							Expected monthly investment (₹)
+						</label>
+						<input
+							id="expectedMonthlyInvestInr"
+							type="number"
+							step="0.01"
+							min="0"
+							className="mt-1 w-full rounded border px-3 py-2"
+							{...register("expectedMonthlyInvestInr")}
+						/>
+					</div>
 					<div className="flex gap-2">
 						<button
 							type="submit"
@@ -191,6 +338,92 @@ export default function EditAccountPage() {
 						</Link>
 					</div>
 				</form>
+
+				{accountType === "gratuity" && (
+					<form
+						onSubmit={handleSubmitEmployment(onSubmitEmployment)}
+						className="flex flex-col gap-4 rounded-lg border bg-white p-4 shadow-sm"
+					>
+						<h2 className="text-lg font-semibold">Employment info</h2>
+						<p className="text-sm text-gray-600">
+							Used for gratuity calculations for this account. Updating these
+							values will influence future gratuity suggestions.
+						</p>
+						<div>
+							<label
+								className="block text-sm text-gray-600"
+								htmlFor="employerName"
+							>
+								Employer name
+							</label>
+							<input
+								id="employerName"
+								type="text"
+								className="mt-1 w-full rounded border px-3 py-2"
+								{...registerEmployment("employerName")}
+							/>
+						</div>
+						<div>
+							<label
+								className="block text-sm text-gray-600"
+								htmlFor="basicSalaryInr"
+							>
+								Current basic salary (INR)
+							</label>
+							<input
+								id="basicSalaryInr"
+								type="number"
+								step="0.01"
+								min="0"
+								className="mt-1 w-full rounded border px-3 py-2"
+								{...registerEmployment("basicSalaryInr")}
+							/>
+						</div>
+						<div>
+							<label
+								className="block text-sm text-gray-600"
+								htmlFor="vpfAmountInr"
+							>
+								VPF amount (INR)
+							</label>
+							<input
+								id="vpfAmountInr"
+								type="number"
+								step="0.01"
+								min="0"
+								className="mt-1 w-full rounded border px-3 py-2"
+								{...registerEmployment("vpfAmountInr")}
+							/>
+						</div>
+						{projectedMonthlyEpf !== null && projectedMonthlyEpf > 0 && (
+							<p className="text-xs text-gray-600">
+								Projected monthly EPF contribution: ₹
+								{projectedMonthlyEpf.toFixed(2)}
+							</p>
+						)}
+						<div>
+							<label
+								className="block text-sm text-gray-600"
+								htmlFor="joiningDate"
+							>
+								Joining date
+							</label>
+							<input
+								id="joiningDate"
+								type="date"
+								className="mt-1 w-full rounded border px-3 py-2"
+								{...registerEmployment("joiningDate")}
+							/>
+						</div>
+						<button
+							type="submit"
+							className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+							disabled={employmentSubmitting}
+						>
+							{employmentSubmitting ? "Saving…" : "Save employment info"}
+						</button>
+					</form>
+				)}
 
 				<div className="rounded-lg border border-red-200 bg-red-50 p-4">
 					<h2 className="font-medium text-red-800">Delete account</h2>

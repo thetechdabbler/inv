@@ -2,7 +2,7 @@
 unit: 005-investment-tracker-ui
 intent: 001-investment-tracker
 created: 2026-03-02T21:50:00Z
-last_updated: 2026-03-02T22:15:00Z
+last_updated: 2026-03-03T19:45:00Z
 ---
 
 # Construction Log: 005-investment-tracker-ui
@@ -27,7 +27,8 @@ last_updated: 2026-03-02T22:15:00Z
 | Bolt ID | Stories | Status | Changed |
 |---------|---------|--------|---------|
 | 009-investment-tracker-ui | 001–003 | ✅ complete | 2026-03-02 |
-| 010-investment-tracker-ui | 004–007 | [ ] planned | - |
+| 010-investment-tracker-ui | 004–007 | ✅ complete | 2026-03-03 |
+| 021-ui-gratuity | 008 | ✅ complete | 2026-03-03 |
 
 ## Execution History
 
@@ -42,17 +43,19 @@ last_updated: 2026-03-02T22:15:00Z
 | 2026-03-03T02:15:00Z | 010-investment-tracker-ui | stage-complete | Implement → Test |
 | 2026-03-03T02:30:00Z | 010-investment-tracker-ui | stage-complete | Test complete |
 | 2026-03-03T03:00:00Z | 010-investment-tracker-ui | completed | All 3 stages done |
+| 2026-03-03T19:30:00Z | 021-ui-gratuity | started | Stage 1: Plan |
+| 2026-03-03T19:45:00Z | 021-ui-gratuity | completed | All 3 stages done |
 
 ## Execution Summary
 
 | Metric | Value |
 |--------|-------|
 | Original bolts planned | 2 |
-| Current bolt count | 2 |
-| Bolts completed | 2 |
+| Current bolt count | 3 |
+| Bolts completed | 3 |
 | Bolts in progress | 0 |
 | Bolts remaining | 0 |
-| Replanning events | 0 |
+| Replanning events | 1 |
 
 ## Notes
 

@@ -14,6 +14,8 @@ type FormData = {
 	name: string;
 	description: string;
 	initialBalancePaise: number;
+	expectedRatePercent?: number | null;
+	expectedMonthlyInvestInr?: number | null;
 };
 
 function toPaise(inr: number): number {
@@ -43,6 +45,10 @@ function AddAccountForm() {
 		}
 		setSubmitting(true);
 		try {
+			const expectedMonthlyPaise =
+				data.expectedMonthlyInvestInr != null
+					? toPaise(Number(data.expectedMonthlyInvestInr))
+					: null;
 			const res = await apiFetch("/api/v1/accounts", {
 				method: "POST",
 				body: JSON.stringify({
@@ -50,6 +56,11 @@ function AddAccountForm() {
 					name: data.name.trim(),
 					description: data.description.trim() || null,
 					initialBalancePaise,
+					expectedRatePercent:
+						data.expectedRatePercent != null
+							? Number(data.expectedRatePercent)
+							: null,
+					expectedMonthlyInvestPaise: expectedMonthlyPaise,
 				}),
 			});
 			if (!res.ok) {
@@ -119,6 +130,40 @@ function AddAccountForm() {
 						className="mt-1 w-full rounded border px-3 py-2"
 						placeholder="Optional"
 						{...register("description")}
+					/>
+				</div>
+				<div>
+					<label
+						className="block text-sm text-gray-600"
+						htmlFor="expectedRatePercent"
+					>
+						Expected rate of return (% p.a.)
+					</label>
+					<input
+						id="expectedRatePercent"
+						type="number"
+						step="0.01"
+						min="0"
+						className="mt-1 w-full rounded border px-3 py-2"
+						placeholder="Optional"
+						{...register("expectedRatePercent")}
+					/>
+				</div>
+				<div>
+					<label
+						className="block text-sm text-gray-600"
+						htmlFor="expectedMonthlyInvestInr"
+					>
+						Expected monthly investment (₹)
+					</label>
+					<input
+						id="expectedMonthlyInvestInr"
+						type="number"
+						step="0.01"
+						min="0"
+						className="mt-1 w-full rounded border px-3 py-2"
+						placeholder="Optional"
+						{...register("expectedMonthlyInvestInr")}
 					/>
 				</div>
 				<div>

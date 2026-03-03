@@ -25,10 +25,14 @@ export async function POST(request: Request) {
 		if (!body || typeof body !== "object") {
 			return validationError("Request body must be a JSON object");
 		}
-		const { type, name, description, initialBalancePaise } = body as Record<
-			string,
-			unknown
-		>;
+		const {
+			type,
+			name,
+			description,
+			initialBalancePaise,
+			expectedRatePercent,
+			expectedMonthlyInvestPaise,
+		} = body as Record<string, unknown>;
 		if (
 			typeof type !== "string" ||
 			!ACCOUNT_TYPES.includes(type as CreateAccountInput["type"])
@@ -62,11 +66,56 @@ export async function POST(request: Request) {
 			description !== undefined && description !== null
 				? String(description)
 				: undefined;
+
+		let expectedRate: number | null | undefined;
+		if (expectedRatePercent !== undefined) {
+			if (expectedRatePercent === null) {
+				expectedRate = null;
+			} else if (typeof expectedRatePercent === "number") {
+				expectedRate = expectedRatePercent;
+			} else {
+				const n = Number(expectedRatePercent);
+				if (!Number.isFinite(n)) {
+					return validationError(
+						"expectedRatePercent must be a finite number or null",
+					);
+				}
+				expectedRate = n;
+			}
+		}
+
+		let expectedMonthlyInvest: number | null | undefined;
+		if (expectedMonthlyInvestPaise !== undefined) {
+			if (expectedMonthlyInvestPaise === null) {
+				expectedMonthlyInvest = null;
+			} else if (typeof expectedMonthlyInvestPaise === "number") {
+				if (
+					!Number.isInteger(expectedMonthlyInvestPaise) ||
+					expectedMonthlyInvestPaise < 0
+				) {
+					return validationError(
+						"expectedMonthlyInvestPaise must be a non-negative integer or null",
+					);
+				}
+				expectedMonthlyInvest = expectedMonthlyInvestPaise;
+			} else {
+				const n = Number(expectedMonthlyInvestPaise);
+				if (!Number.isInteger(n) || n < 0) {
+					return validationError(
+						"expectedMonthlyInvestPaise must be a non-negative integer or null",
+					);
+				}
+				expectedMonthlyInvest = n;
+			}
+		}
+
 		const account = await createAccount({
 			type: type as CreateAccountInput["type"],
 			name: trimmedName,
 			description: desc ?? null,
 			initialBalancePaise,
+			expectedRatePercent: expectedRate,
+			expectedMonthlyInvestPaise: expectedMonthlyInvest,
 		});
 		return NextResponse.json(account, { status: 201 });
 	} catch (e) {

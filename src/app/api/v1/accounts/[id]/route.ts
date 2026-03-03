@@ -71,7 +71,13 @@ export async function PATCH(
 		if (!body || typeof body !== "object") {
 			return validationError("Request body must be a JSON object");
 		}
-		const { name, description, type } = body as Record<string, unknown>;
+		const {
+			name,
+			description,
+			type,
+			expectedRatePercent,
+			expectedMonthlyInvestPaise,
+		} = body as Record<string, unknown>;
 		const input: UpdateAccountInput = {};
 		if (name !== undefined) {
 			if (typeof name !== "string") {
@@ -91,6 +97,44 @@ export async function PATCH(
 				description === null || description === undefined
 					? null
 					: String(description).trim();
+		}
+		if (expectedRatePercent !== undefined) {
+			if (expectedRatePercent === null) {
+				input.expectedRatePercent = null;
+			} else if (typeof expectedRatePercent === "number") {
+				input.expectedRatePercent = expectedRatePercent;
+			} else {
+				const n = Number(expectedRatePercent);
+				if (!Number.isFinite(n)) {
+					return validationError(
+						"expectedRatePercent must be a finite number or null",
+					);
+				}
+				input.expectedRatePercent = n;
+			}
+		}
+		if (expectedMonthlyInvestPaise !== undefined) {
+			if (expectedMonthlyInvestPaise === null) {
+				input.expectedMonthlyInvestPaise = null;
+			} else if (typeof expectedMonthlyInvestPaise === "number") {
+				if (
+					!Number.isInteger(expectedMonthlyInvestPaise) ||
+					expectedMonthlyInvestPaise < 0
+				) {
+					return validationError(
+						"expectedMonthlyInvestPaise must be a non-negative integer or null",
+					);
+				}
+				input.expectedMonthlyInvestPaise = expectedMonthlyInvestPaise;
+			} else {
+				const n = Number(expectedMonthlyInvestPaise);
+				if (!Number.isInteger(n) || n < 0) {
+					return validationError(
+						"expectedMonthlyInvestPaise must be a non-negative integer or null",
+					);
+				}
+				input.expectedMonthlyInvestPaise = n;
+			}
 		}
 		if (type !== undefined) {
 			if (

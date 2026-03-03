@@ -1,26 +1,38 @@
 "use client";
 
+import { PageTransition } from "@/components/PageTransition";
 import { RequireAuth } from "@/components/RequireAuth";
-import { apiJson } from "@/lib/api";
-import { formatIndian, formatInr } from "@/lib/format";
+import { AccountDateFilter } from "@/components/filters/AccountDateFilter";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableFooter,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { apiFetch, apiJson } from "@/lib/api";
+import { TYPE_COLORS } from "@/lib/constants";
+import { formatDate, formatIndian, formatInr } from "@/lib/format";
+import { paiseToInr } from "@/lib/format";
 import type {
 	AccountHistoryResponse,
 	AccountsResponse,
 	HistoryEntry,
 } from "@/types/api";
+import { Check, ChevronDown, Pencil, Plus, Trash2, X } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import useSWR from "swr";
-
-const TYPE_COLORS: Record<string, string> = {
-	stocks: "bg-blue-500",
-	mutual_fund: "bg-violet-500",
-	ppf: "bg-emerald-500",
-	epf: "bg-teal-500",
-	nps: "bg-amber-500",
-	bank_deposit: "bg-cyan-500",
-	gratuity: "bg-rose-500",
-};
+import { toast } from "sonner";
+import useSWR, { useSWRConfig } from "swr";
 
 const MONTH_NAMES = [
 	"January",
@@ -150,49 +162,218 @@ function buildMonthlyReports(
 	});
 }
 
-function TransactionRow({ tx }: { tx: TransactionWithAccount }) {
+const PAGE_SIZE = 50;
+
+function TransactionRow({
+	tx,
+	onMutate,
+}: {
+	tx: TransactionWithAccount;
+	onMutate: () => void;
+}) {
+	const [editing, setEditing] = useState(false);
+	const [deleting, setDeleting] = useState(false);
+	const [saving, setSaving] = useState(false);
+	const [editDate, setEditDate] = useState(tx.date);
+	const [editAmount, setEditAmount] = useState(
+		String(paiseToInr(tx.amountOrValuePaise)),
+	);
+	const [editType, setEditType] = useState(tx.type);
+
+	async function handleSave() {
+		setSaving(true);
+		try {
+			const amountPaise = Math.round(Number.parseFloat(editAmount) * 100);
+			if (Number.isNaN(amountPaise) || amountPaise <= 0) {
+				toast.error("Amount must be a positive number");
+				setSaving(false);
+				return;
+			}
+			await apiFetch(`/api/v1/transactions/${tx.id}`, {
+				method: "PATCH",
+				body: JSON.stringify({
+					date: editDate,
+					amountPaise,
+					type: editType,
+				}),
+			});
+			toast.success("Transaction updated");
+			setEditing(false);
+			onMutate();
+		} catch {
+			toast.error("Failed to update transaction");
+		} finally {
+			setSaving(false);
+		}
+	}
+
+	async function handleDelete() {
+		setSaving(true);
+		try {
+			await apiFetch(`/api/v1/transactions/${tx.id}`, { method: "DELETE" });
+			toast.success("Transaction deleted");
+			onMutate();
+		} catch {
+			toast.error("Failed to delete transaction");
+		} finally {
+			setSaving(false);
+			setDeleting(false);
+		}
+	}
+
+	if (deleting) {
+		return (
+			<div className="flex items-center justify-between px-5 py-3 bg-destructive/5">
+				<p className="text-sm text-foreground">
+					Delete this {tx.type} of {formatInr(tx.amountOrValuePaise)}?
+				</p>
+				<div className="flex items-center gap-2">
+					<Button
+						variant="destructive"
+						size="sm"
+						onClick={handleDelete}
+						disabled={saving}
+					>
+						{saving ? "Deleting…" : "Delete"}
+					</Button>
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={() => setDeleting(false)}
+						disabled={saving}
+					>
+						Cancel
+					</Button>
+				</div>
+			</div>
+		);
+	}
+
+	if (editing) {
+		return (
+			<div className="flex items-center gap-3 px-5 py-3">
+				<Input
+					type="date"
+					value={editDate}
+					onChange={(e) => setEditDate(e.target.value)}
+					className="h-8 w-36 text-sm"
+				/>
+				<select
+					value={editType}
+					onChange={(e) =>
+						setEditType(e.target.value as "investment" | "withdrawal")
+					}
+					className="h-8 rounded-md border border-input bg-transparent px-2 text-sm dark:bg-card dark:dark-inset"
+				>
+					<option value="investment">Investment</option>
+					<option value="withdrawal">Withdrawal</option>
+				</select>
+				<Input
+					type="number"
+					step="0.01"
+					min="0.01"
+					value={editAmount}
+					onChange={(e) => setEditAmount(e.target.value)}
+					className="h-8 w-28 text-sm"
+					placeholder="Amount (₹)"
+				/>
+				<div className="ml-auto flex items-center gap-1">
+					<Button
+						variant="ghost"
+						size="icon"
+						className="h-7 w-7"
+						onClick={handleSave}
+						disabled={saving}
+					>
+						<Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+					</Button>
+					<Button
+						variant="ghost"
+						size="icon"
+						className="h-7 w-7"
+						onClick={() => setEditing(false)}
+						disabled={saving}
+					>
+						<X className="h-4 w-4 text-muted-foreground" />
+					</Button>
+				</div>
+			</div>
+		);
+	}
+
 	return (
-		<div className="flex items-center justify-between px-5 py-3">
+		<div className="group flex items-center justify-between px-5 py-3">
 			<div className="flex items-center gap-3">
 				<span
 					className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
 						tx.type === "investment"
-							? "bg-emerald-50 text-emerald-600"
-							: "bg-red-50 text-red-500"
+							? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+							: "bg-red-500/10 text-red-500 dark:text-red-400"
 					}`}
 				>
 					{tx.type === "investment" ? "\u2191" : "\u2193"}
 				</span>
 				<div>
-					<p className="text-sm font-medium text-slate-700 capitalize">
+					<p className="text-sm font-medium text-foreground capitalize">
 						{tx.type}
 					</p>
 					<div className="flex items-center gap-2 mt-0.5">
 						<span
-							className={`inline-flex h-4 w-4 items-center justify-center rounded text-white text-[8px] font-bold ${TYPE_COLORS[tx.accountType] ?? "bg-slate-400"}`}
+							className={`inline-flex h-4 w-4 items-center justify-center rounded text-white text-[8px] font-bold ${TYPE_COLORS[tx.accountType] ?? "bg-muted-foreground"}`}
 						>
 							{tx.accountName.slice(0, 2).toUpperCase()}
 						</span>
-						<span className="text-xs text-slate-400">{tx.accountName}</span>
-						<span className="text-xs text-slate-300">&middot;</span>
-						<span className="text-xs text-slate-400">{tx.date}</span>
+						<span className="text-xs text-muted-foreground">
+							{tx.accountName}
+						</span>
+						<span className="text-xs text-muted-foreground/50">&middot;</span>
+						<span className="text-xs text-muted-foreground">
+							{formatDate(tx.date)}
+						</span>
 					</div>
 				</div>
 			</div>
-			<div className="text-right">
-				<p
-					className={`text-sm font-semibold ${
-						tx.type === "investment" ? "text-emerald-600" : "text-red-500"
-					}`}
-				>
-					{tx.type === "investment" ? "+" : "-"}
-					{formatInr(tx.amountOrValuePaise)}
-				</p>
-				{tx.description && (
-					<p className="text-xs text-slate-400 truncate max-w-[180px]">
-						{tx.description}
+			<div className="flex items-center gap-3">
+				<div className="text-right">
+					<p
+						className={`text-sm font-semibold ${
+							tx.type === "investment"
+								? "text-emerald-600 dark:text-emerald-400"
+								: "text-red-500 dark:text-red-400"
+						}`}
+					>
+						{tx.type === "investment" ? "+" : "-"}
+						{formatInr(tx.amountOrValuePaise)}
 					</p>
-				)}
+					{tx.description && (
+						<p className="text-xs text-muted-foreground truncate max-w-[180px]">
+							{tx.description}
+						</p>
+					)}
+				</div>
+				<div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+					<Button
+						variant="ghost"
+						size="icon"
+						className="h-7 w-7"
+						onClick={() => {
+							setEditDate(tx.date);
+							setEditAmount(String(paiseToInr(tx.amountOrValuePaise)));
+							setEditType(tx.type);
+							setEditing(true);
+						}}
+					>
+						<Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+					</Button>
+					<Button
+						variant="ghost"
+						size="icon"
+						className="h-7 w-7"
+						onClick={() => setDeleting(true)}
+					>
+						<Trash2 className="h-3.5 w-3.5 text-destructive" />
+					</Button>
+				</div>
 			</div>
 		</div>
 	);
@@ -200,31 +381,32 @@ function TransactionRow({ tx }: { tx: TransactionWithAccount }) {
 
 function MonthSummaryFooter({ group }: { group: MonthGroup }) {
 	return (
-		<div className="flex flex-wrap items-center justify-between gap-3 rounded-b-xl bg-slate-50 border-t border-slate-200 px-5 py-3">
-			<span className="text-xs font-medium text-slate-500">
+		<CardFooter className="flex-wrap gap-3 justify-between bg-muted/50 border-t px-5 py-3">
+			<span className="text-xs font-medium text-muted-foreground">
 				{group.txCount} transaction{group.txCount !== 1 ? "s" : ""}
 			</span>
 			<div className="flex items-center gap-4 text-xs font-semibold">
-				<span className="text-emerald-600">
+				<span className="text-emerald-600 dark:text-emerald-400">
 					+{formatInr(group.totalInvestedPaise)} invested
 				</span>
 				{group.totalWithdrawnPaise > 0 && (
-					<span className="text-red-500">
+					<span className="text-red-500 dark:text-red-400">
 						-{formatInr(group.totalWithdrawnPaise)} withdrawn
 					</span>
 				)}
-				<span
-					className={`rounded-full px-2.5 py-0.5 ${
+				<Badge
+					variant="outline"
+					className={
 						group.netPaise >= 0
-							? "bg-emerald-50 text-emerald-700"
-							: "bg-red-50 text-red-600"
-					}`}
+							? "text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
+							: "text-red-500 dark:text-red-400 border-red-200 dark:border-red-800"
+					}
 				>
 					Net: {group.netPaise >= 0 ? "+" : ""}
 					{formatInr(group.netPaise)}
-				</span>
+				</Badge>
 			</div>
-		</div>
+		</CardFooter>
 	);
 }
 
@@ -235,7 +417,7 @@ function MonthlyReportView({
 }) {
 	if (reports.length === 0) {
 		return (
-			<p className="text-sm text-slate-400 text-center py-8">
+			<p className="text-sm text-muted-foreground text-center py-8">
 				No data for monthly report.
 			</p>
 		);
@@ -249,178 +431,162 @@ function MonthlyReportView({
 	return (
 		<div className="space-y-5">
 			<div className="grid gap-4 sm:grid-cols-3">
-				<div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-					<p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-						Total Invested
-					</p>
-					<p className="mt-1 text-xl font-bold text-emerald-600">
-						{formatIndian(totalInvested)}
-					</p>
-				</div>
-				<div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-					<p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-						Total Withdrawn
-					</p>
-					<p className="mt-1 text-xl font-bold text-red-500">
-						{formatIndian(totalWithdrawn)}
-					</p>
-				</div>
-				<div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-					<p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-						Avg Monthly Investment
-					</p>
-					<p className="mt-1 text-xl font-bold text-indigo-600">
-						{formatIndian(Math.round(avgMonthlyInvested))}
-					</p>
-				</div>
+				<Card>
+					<CardContent className="p-4">
+						<p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+							Total Invested
+						</p>
+						<p className="mt-1 text-xl font-bold text-emerald-600 dark:text-emerald-400">
+							{formatIndian(totalInvested)}
+						</p>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardContent className="p-4">
+						<p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+							Total Withdrawn
+						</p>
+						<p className="mt-1 text-xl font-bold text-red-500 dark:text-red-400">
+							{formatIndian(totalWithdrawn)}
+						</p>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardContent className="p-4">
+						<p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+							Avg Monthly Investment
+						</p>
+						<p className="mt-1 text-xl font-bold text-primary">
+							{formatIndian(Math.round(avgMonthlyInvested))}
+						</p>
+					</CardContent>
+				</Card>
 			</div>
 
-			<div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-				<table className="w-full text-sm">
-					<thead>
-						<tr className="border-b border-slate-200 bg-slate-50">
-							<th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-								Month
-							</th>
-							<th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-emerald-600">
+			<Card>
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead className="px-5">Month</TableHead>
+							<TableHead className="px-5 text-right text-emerald-600 dark:text-emerald-400">
 								Invested
-							</th>
-							<th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-red-500">
+							</TableHead>
+							<TableHead className="px-5 text-right text-red-500 dark:text-red-400">
 								Withdrawn
-							</th>
-							<th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
-								Net
-							</th>
-							<th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
-								Txns
-							</th>
-						</tr>
-					</thead>
-					<tbody>
+							</TableHead>
+							<TableHead className="px-5 text-right">Net</TableHead>
+							<TableHead className="px-5 text-right">Txns</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
 						{reports.map((r) => (
-							<tr
-								key={r.key}
-								className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors"
-							>
-								<td className="px-5 py-3 font-medium text-slate-700">
-									{r.label}
-								</td>
-								<td className="px-5 py-3 text-right text-emerald-600 font-medium">
+							<TableRow key={r.key}>
+								<TableCell className="px-5 font-medium">{r.label}</TableCell>
+								<TableCell className="px-5 text-right text-emerald-600 dark:text-emerald-400 font-medium">
 									{r.investedPaise > 0 ? formatInr(r.investedPaise) : "\u2014"}
-								</td>
-								<td className="px-5 py-3 text-right text-red-500 font-medium">
+								</TableCell>
+								<TableCell className="px-5 text-right text-red-500 dark:text-red-400 font-medium">
 									{r.withdrawnPaise > 0
 										? formatInr(r.withdrawnPaise)
 										: "\u2014"}
-								</td>
-								<td
-									className={`px-5 py-3 text-right font-semibold ${r.netPaise >= 0 ? "text-emerald-600" : "text-red-500"}`}
+								</TableCell>
+								<TableCell
+									className={`px-5 text-right font-semibold ${r.netPaise >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}
 								>
 									{r.netPaise >= 0 ? "+" : ""}
 									{formatInr(r.netPaise)}
-								</td>
-								<td className="px-5 py-3 text-right text-slate-400">
+								</TableCell>
+								<TableCell className="px-5 text-right text-muted-foreground">
 									{r.txCount}
-								</td>
-							</tr>
+								</TableCell>
+							</TableRow>
 						))}
-					</tbody>
-					<tfoot>
-						<tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
-							<td className="px-5 py-3 text-slate-700">Total</td>
-							<td className="px-5 py-3 text-right text-emerald-600">
+					</TableBody>
+					<TableFooter>
+						<TableRow>
+							<TableCell className="px-5 font-semibold">Total</TableCell>
+							<TableCell className="px-5 text-right font-semibold text-emerald-600 dark:text-emerald-400">
 								{formatInr(totalInvested)}
-							</td>
-							<td className="px-5 py-3 text-right text-red-500">
+							</TableCell>
+							<TableCell className="px-5 text-right font-semibold text-red-500 dark:text-red-400">
 								{formatInr(totalWithdrawn)}
-							</td>
-							<td
-								className={`px-5 py-3 text-right ${totalInvested - totalWithdrawn >= 0 ? "text-emerald-600" : "text-red-500"}`}
+							</TableCell>
+							<TableCell
+								className={`px-5 text-right font-semibold ${totalInvested - totalWithdrawn >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}
 							>
 								{totalInvested - totalWithdrawn >= 0 ? "+" : ""}
 								{formatInr(totalInvested - totalWithdrawn)}
-							</td>
-							<td className="px-5 py-3 text-right text-slate-500">
+							</TableCell>
+							<TableCell className="px-5 text-right text-muted-foreground font-semibold">
 								{reports.reduce((s, r) => s + r.txCount, 0)}
-							</td>
-						</tr>
-					</tfoot>
-				</table>
-			</div>
+							</TableCell>
+						</TableRow>
+					</TableFooter>
+				</Table>
+			</Card>
 
-			{/* Per-account breakdown for each month */}
 			<div className="space-y-3">
-				<h3 className="font-semibold text-slate-700">
+				<h3 className="font-semibold text-foreground">
 					Monthly Breakdown by Account
 				</h3>
 				{reports.map((r) => (
-					<details
-						key={r.key}
-						className="rounded-xl border border-slate-200 bg-white shadow-sm group"
-					>
-						<summary className="flex cursor-pointer items-center justify-between px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
-							<span>{r.label}</span>
-							<div className="flex items-center gap-3">
-								<span className="text-emerald-600 text-xs font-semibold">
-									+{formatInr(r.investedPaise)}
-								</span>
-								<svg
-									className="h-4 w-4 text-slate-400 transition-transform group-open:rotate-180"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-									aria-hidden="true"
-								>
-									<title>Expand</title>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M19 9l-7 7-7-7"
-									/>
-								</svg>
-							</div>
-						</summary>
-						<div className="border-t border-slate-100 px-5 py-3 space-y-2">
-							{r.byAccount.map((acct) => (
-								<div
-									key={acct.name}
-									className="flex items-center justify-between text-sm"
-								>
-									<div className="flex items-center gap-2">
-										<span
-											className={`inline-flex h-5 w-5 items-center justify-center rounded text-white text-[8px] font-bold ${TYPE_COLORS[acct.type] ?? "bg-slate-400"}`}
-										>
-											{acct.name.slice(0, 2).toUpperCase()}
-										</span>
-										<span className="text-slate-600">{acct.name}</span>
-									</div>
-									<div className="flex items-center gap-3 text-xs font-medium">
-										{acct.investedPaise > 0 && (
-											<span className="text-emerald-600">
-												+{formatInr(acct.investedPaise)}
-											</span>
-										)}
-										{acct.withdrawnPaise > 0 && (
-											<span className="text-red-500">
-												-{formatInr(acct.withdrawnPaise)}
-											</span>
-										)}
-									</div>
+					<Card key={r.key} className="group">
+						<details>
+							<summary className="flex cursor-pointer items-center justify-between px-5 py-3 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors list-none">
+								<span>{r.label}</span>
+								<div className="flex items-center gap-3">
+									<span className="text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
+										+{formatInr(r.investedPaise)}
+									</span>
+									<ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
 								</div>
-							))}
-						</div>
-					</details>
+							</summary>
+							<div className="border-t px-5 py-3 space-y-2">
+								{r.byAccount.map((acct) => (
+									<div
+										key={acct.name}
+										className="flex items-center justify-between text-sm"
+									>
+										<div className="flex items-center gap-2">
+											<span
+												className={`inline-flex h-5 w-5 items-center justify-center rounded text-white text-[8px] font-bold ${TYPE_COLORS[acct.type] ?? "bg-muted-foreground"}`}
+											>
+												{acct.name.slice(0, 2).toUpperCase()}
+											</span>
+											<span className="text-muted-foreground">{acct.name}</span>
+										</div>
+										<div className="flex items-center gap-3 text-xs font-medium">
+											{acct.investedPaise > 0 && (
+												<span className="text-emerald-600 dark:text-emerald-400">
+													+{formatInr(acct.investedPaise)}
+												</span>
+											)}
+											{acct.withdrawnPaise > 0 && (
+												<span className="text-red-500 dark:text-red-400">
+													-{formatInr(acct.withdrawnPaise)}
+												</span>
+											)}
+										</div>
+									</div>
+								))}
+							</div>
+						</details>
+					</Card>
 				))}
 			</div>
 		</div>
 	);
 }
 
-type TabView = "transactions" | "report";
-
 function TransactionsContent() {
-	const [activeTab, setActiveTab] = useState<TabView>("transactions");
+	const { mutate } = useSWRConfig();
+	const searchParams = useSearchParams();
+	const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+	const filterAccountIds =
+		searchParams.get("accountIds")?.split(",").filter(Boolean) ?? [];
+	const filterFrom = searchParams.get("from") ?? "";
+	const filterTo = searchParams.get("to") ?? "";
 
 	const { data: accountsData, isLoading: accLoading } =
 		useSWR<AccountsResponse>("/api/v1/accounts", (url: string) =>
@@ -449,6 +615,22 @@ function TransactionsContent() {
 		);
 	});
 
+	function handleMutate() {
+		mutate(
+			(key: unknown) =>
+				typeof key === "string"
+					? key.includes("histor") || key.includes("account")
+					: Array.isArray(key) &&
+						key.some(
+							(k) =>
+								typeof k === "string" &&
+								(k.includes("histor") || k.includes("account")),
+						),
+			undefined,
+			{ revalidate: true },
+		);
+	}
+
 	const allTransactions: TransactionWithAccount[] = allAccounts
 		.flatMap((a) =>
 			(allHistories?.[a.id] ?? [])
@@ -462,127 +644,133 @@ function TransactionsContent() {
 		)
 		.sort((a, b) => b.date.localeCompare(a.date));
 
-	const monthGroups = groupByMonth(allTransactions);
-	const monthlyReports = buildMonthlyReports(allTransactions);
+	const filteredTransactions = allTransactions.filter((tx) => {
+		if (filterAccountIds.length > 0 && !filterAccountIds.includes(tx.accountId))
+			return false;
+		if (filterFrom && tx.date < filterFrom) return false;
+		if (filterTo && tx.date > filterTo) return false;
+		return true;
+	});
+
+	const visibleTransactions = filteredTransactions.slice(0, visibleCount);
+	const monthGroups = groupByMonth(visibleTransactions);
+	const monthlyReports = buildMonthlyReports(filteredTransactions);
+	const hasMore = visibleCount < filteredTransactions.length;
 
 	const isLoading = accLoading || histLoading;
 
 	return (
-		<div className="space-y-6">
+		<PageTransition className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-slate-800">Transactions</h1>
-					<p className="text-sm text-slate-400 mt-1">
-						{allTransactions.length} transaction
-						{allTransactions.length !== 1 ? "s" : ""} across all accounts
+					<h1 className="text-2xl font-bold text-foreground">Transactions</h1>
+					<p className="text-sm text-muted-foreground mt-1">
+						{hasMore
+							? `Showing ${visibleCount} of ${filteredTransactions.length}`
+							: `${filteredTransactions.length} transaction${filteredTransactions.length !== 1 ? "s" : ""}`}{" "}
+						{filterAccountIds.length > 0 || filterFrom || filterTo
+							? "(filtered)"
+							: "across all accounts"}
 					</p>
 				</div>
-				<Link
-					href="/transactions/add"
-					className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 transition-colors"
-				>
-					<svg
-						className="h-4 w-4"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
-						aria-hidden="true"
-					>
-						<title>Add</title>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-						/>
-					</svg>
-					Add Transaction
-				</Link>
+				<Button asChild>
+					<Link href="/transactions/add">
+						<Plus className="h-4 w-4" />
+						Add Transaction
+					</Link>
+				</Button>
 			</div>
 
-			{/* Tab switcher */}
-			<div className="flex gap-1 rounded-lg bg-slate-100 p-1 w-fit">
-				<button
-					type="button"
-					onClick={() => setActiveTab("transactions")}
-					className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-						activeTab === "transactions"
-							? "bg-white text-slate-800 shadow-sm"
-							: "text-slate-500 hover:text-slate-700"
-					}`}
-				>
-					All Transactions
-				</button>
-				<button
-					type="button"
-					onClick={() => setActiveTab("report")}
-					className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-						activeTab === "report"
-							? "bg-white text-slate-800 shadow-sm"
-							: "text-slate-500 hover:text-slate-700"
-					}`}
-				>
-					Monthly Report
-				</button>
-			</div>
-
-			{isLoading && (
-				<div className="space-y-2">
-					{[1, 2, 3, 4, 5].map((i) => (
-						<div
-							key={i}
-							className="h-16 animate-pulse rounded-xl bg-slate-200"
-						/>
-					))}
-				</div>
+			{!accLoading && allAccounts.length > 0 && (
+				<AccountDateFilter accounts={allAccounts} />
 			)}
 
-			{!isLoading && allTransactions.length === 0 && (
-				<div className="rounded-xl border-2 border-dashed border-slate-300 bg-white p-10 text-center">
-					<p className="text-slate-500">No transactions recorded yet.</p>
-					<p className="text-sm text-slate-400 mt-1">
-						{allAccounts.length === 0
-							? "Create an account first, then add transactions."
-							: 'Click "Add Transaction" to get started.'}
-					</p>
-				</div>
-			)}
+			<Tabs defaultValue="transactions">
+				<TabsList>
+					<TabsTrigger value="transactions">All Transactions</TabsTrigger>
+					<TabsTrigger value="report">Monthly Report</TabsTrigger>
+				</TabsList>
 
-			{!isLoading &&
-				allTransactions.length > 0 &&
-				activeTab === "transactions" && (
-					<div className="space-y-5">
-						{monthGroups.map((group) => (
-							<div
-								key={group.key}
-								className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden"
-							>
-								<div className="flex items-center justify-between bg-slate-50 border-b border-slate-200 px-5 py-3">
-									<h2 className="font-semibold text-slate-700 text-sm">
-										{group.label}
-									</h2>
-									<span className="text-xs text-slate-400">
-										{group.txCount} txn{group.txCount !== 1 ? "s" : ""}
-									</span>
+				<TabsContent value="transactions">
+					{isLoading && (
+						<div className="space-y-2">
+							{[1, 2, 3, 4, 5].map((i) => (
+								<Skeleton key={i} className="h-16 rounded-xl" />
+							))}
+						</div>
+					)}
+
+					{!isLoading && allTransactions.length === 0 && (
+						<Card className="border-dashed border-2">
+							<CardContent className="p-10 text-center">
+								<p className="text-muted-foreground">
+									No transactions recorded yet.
+								</p>
+								<p className="text-sm text-muted-foreground/70 mt-1">
+									{allAccounts.length === 0
+										? "Create an account first, then add transactions."
+										: 'Click "Add Transaction" to get started.'}
+								</p>
+							</CardContent>
+						</Card>
+					)}
+
+					{!isLoading && allTransactions.length > 0 && (
+						<div className="space-y-5">
+							{monthGroups.map((group) => (
+								<Card key={group.key} className="overflow-hidden">
+									<div className="flex items-center justify-between bg-muted/50 border-b px-5 py-3">
+										<h2 className="font-semibold text-foreground text-sm">
+											{group.label}
+										</h2>
+										<span className="text-xs text-muted-foreground">
+											{group.txCount} txn{group.txCount !== 1 ? "s" : ""}
+										</span>
+									</div>
+									<div className="divide-y">
+										{group.transactions.map((tx) => (
+											<TransactionRow
+												key={tx.id}
+												tx={tx}
+												onMutate={handleMutate}
+											/>
+										))}
+									</div>
+									<MonthSummaryFooter group={group} />
+								</Card>
+							))}
+							{hasMore && (
+								<div className="text-center">
+									<Button
+										variant="outline"
+										onClick={() =>
+											setVisibleCount((c) =>
+												Math.min(c + PAGE_SIZE, filteredTransactions.length),
+											)
+										}
+									>
+										Load more ({filteredTransactions.length - visibleCount}{" "}
+										remaining)
+									</Button>
 								</div>
-								<div className="divide-y divide-slate-100">
-									{group.transactions.map((tx, i) => (
-										<TransactionRow
-											key={`${tx.accountId}-${tx.date}-${tx.type}-${i}`}
-											tx={tx}
-										/>
-									))}
-								</div>
-								<MonthSummaryFooter group={group} />
-							</div>
-						))}
-					</div>
-				)}
+							)}
+						</div>
+					)}
+				</TabsContent>
 
-			{!isLoading && allTransactions.length > 0 && activeTab === "report" && (
-				<MonthlyReportView reports={monthlyReports} />
-			)}
-		</div>
+				<TabsContent value="report">
+					{isLoading ? (
+						<div className="space-y-2">
+							{[1, 2, 3].map((i) => (
+								<Skeleton key={i} className="h-16 rounded-xl" />
+							))}
+						</div>
+					) : (
+						<MonthlyReportView reports={monthlyReports} />
+					)}
+				</TabsContent>
+			</Tabs>
+		</PageTransition>
 	);
 }
 

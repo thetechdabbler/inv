@@ -13,6 +13,8 @@ export interface AccountListItem {
 	name: string;
 	description: string | null;
 	initialBalancePaise: number;
+	expectedRatePercent?: number | null;
+	expectedMonthlyInvestPaise?: number | null;
 	currentValuePaise?: number;
 	totalContributionsPaise?: number;
 	createdAt: string;
@@ -48,6 +50,7 @@ export const TRANSACTION_TYPES = ["investment", "withdrawal"] as const;
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 
 export interface HistoryEntry {
+	id: string;
 	date: string; // "YYYY-MM-DD"
 	type: "investment" | "withdrawal" | "valuation";
 	amountOrValuePaise: number;
@@ -57,6 +60,7 @@ export interface HistoryEntry {
 
 export interface AccountHistoryResponse {
 	entries: HistoryEntry[];
+	total: number;
 }
 
 export interface LLMInteraction {

@@ -1,31 +1,35 @@
 "use client";
 
+import { PageTransition } from "@/components/PageTransition";
 import { RequireAuth } from "@/components/RequireAuth";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch, apiJson } from "@/lib/api";
-import { formatInr } from "@/lib/format";
+import { TYPE_COLORS } from "@/lib/constants";
+import { formatDate, formatInr } from "@/lib/format";
 import {
 	type AccountHistoryResponse,
 	type AccountListItem,
 	type AccountsResponse,
-	type HistoryEntry,
 	TRANSACTION_TYPES,
 	type TransactionType,
 } from "@/types/api";
+import { ArrowLeft, Building2 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import useSWR, { useSWRConfig } from "swr";
-
-const TYPE_COLORS: Record<string, string> = {
-	stocks: "bg-blue-500",
-	mutual_fund: "bg-violet-500",
-	ppf: "bg-emerald-500",
-	epf: "bg-teal-500",
-	nps: "bg-amber-500",
-	bank_deposit: "bg-cyan-500",
-	gratuity: "bg-rose-500",
-};
 
 type FormData = {
 	accountId: string;
@@ -40,10 +44,12 @@ function toPaise(inr: number): number {
 }
 
 function AddTransactionContent() {
+	const searchParams = useSearchParams();
 	const [selectedAccountId, setSelectedAccountId] = useState<string | null>(
 		null,
 	);
 	const [submitting, setSubmitting] = useState(false);
+	const [suggestedEpf, setSuggestedEpf] = useState<number | null>(null);
 	const { mutate } = useSWRConfig();
 
 	const { data: accountsData, isLoading: accLoading } =
@@ -52,6 +58,13 @@ function AddTransactionContent() {
 		);
 
 	const accounts: AccountListItem[] = accountsData?.accounts ?? [];
+
+	useEffect(() => {
+		const accountId = searchParams.get("accountId");
+		if (!accountId || accounts.length === 0) return;
+		const found = accounts.some((a) => a.id === accountId);
+		if (found) setSelectedAccountId(accountId);
+	}, [searchParams, accounts]);
 
 	const selectedId = selectedAccountId ?? "";
 	const { data: historyData } = useSWR<AccountHistoryResponse>(
@@ -67,13 +80,66 @@ function AddTransactionContent() {
 		register,
 		handleSubmit,
 		reset,
+		control,
 		formState: { errors },
 	} = useForm<FormData>({
 		defaultValues: {
 			date: new Date().toISOString().slice(0, 10),
 			description: "",
+			type: "investment",
+			amountInr: undefined as unknown as number,
 		},
 	});
+	// For EPF accounts, compute a suggested EPF amount (label only)
+	useEffect(() => {
+		const account = accounts.find((a) => a.id === selectedAccountId);
+		if (!account || account.type !== "epf") {
+			setSuggestedEpf(null);
+			return;
+		}
+
+		let cancelled = false;
+		(async () => {
+			async function computeFromAccount(id: string) {
+				const res = await apiFetch(
+					`/api/v1/employment-info/${encodeURIComponent(id)}`,
+				);
+				if (!res.ok) return null;
+				const info = (await res.json()) as {
+					basicSalaryInr: number | null;
+					vpfAmountInr: number | null;
+				};
+				const basic = Number(info.basicSalaryInr ?? 0);
+				const vpf = Number(info.vpfAmountInr ?? 0);
+				if (basic <= 0 && vpf <= 0) return null;
+				const roundedTwelvePercent = Math.round(0.12 * basic);
+				const projectedMonthlyEpf = roundedTwelvePercent * 2 + vpf - 1250;
+				if (!Number.isFinite(projectedMonthlyEpf) || projectedMonthlyEpf <= 0)
+					return null;
+				return projectedMonthlyEpf;
+			}
+
+			try {
+				let value = await computeFromAccount(account.id);
+
+				if (value == null) {
+					const gratuity = accounts.find((a) => a.type === "gratuity");
+					if (gratuity) {
+						value = await computeFromAccount(gratuity.id);
+					}
+				}
+
+				if (cancelled) return;
+				setSuggestedEpf(value ?? null);
+			} catch {
+				if (!cancelled) setSuggestedEpf(null);
+			}
+		})();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [accounts, selectedAccountId]);
 
 	async function onSubmit(data: FormData) {
 		const amountPaise = toPaise(Number(data.amountInr));
@@ -106,6 +172,8 @@ function AddTransactionContent() {
 			reset({
 				date: new Date().toISOString().slice(0, 10),
 				description: "",
+				type: "investment",
+				amountInr: undefined as unknown as number,
 			});
 			mutate((key: unknown) => {
 				if (typeof key === "string") return key.includes("history");
@@ -124,8 +192,8 @@ function AddTransactionContent() {
 	if (accLoading) {
 		return (
 			<div className="space-y-4">
-				<div className="h-8 w-48 animate-pulse rounded-lg bg-slate-200" />
-				<div className="h-64 animate-pulse rounded-xl bg-slate-200" />
+				<Skeleton className="h-8 w-48 rounded-lg" />
+				<Skeleton className="h-64 rounded-xl" />
 			</div>
 		);
 	}
@@ -134,72 +202,44 @@ function AddTransactionContent() {
 		return (
 			<div className="space-y-6">
 				<div className="flex items-center gap-3">
-					<Link
-						href="/transactions"
-						className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
-					>
-						<svg
-							className="h-4 w-4"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-							aria-hidden="true"
-						>
-							<title>Back</title>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M15 19l-7-7 7-7"
-							/>
-						</svg>
-						Back
-					</Link>
-					<h1 className="text-2xl font-bold text-slate-800">Add Transaction</h1>
+					<Button variant="ghost" size="sm" asChild>
+						<Link href="/transactions">
+							<ArrowLeft className="h-4 w-4" />
+							Back
+						</Link>
+					</Button>
+					<h1 className="text-2xl font-bold text-foreground">
+						Add Transaction
+					</h1>
 				</div>
-				<div className="rounded-xl border-2 border-dashed border-slate-300 bg-white p-10 text-center">
-					<p className="text-slate-500">No accounts found.</p>
-					<p className="text-sm text-slate-400 mt-1">
-						Create an account first before adding transactions.
-					</p>
-				</div>
+				<Card className="border-dashed border-2">
+					<CardContent className="p-10 text-center">
+						<p className="text-muted-foreground">No accounts found.</p>
+						<p className="text-sm text-muted-foreground/70 mt-1">
+							Create an account first before adding transactions.
+						</p>
+					</CardContent>
+				</Card>
 			</div>
 		);
 	}
 
 	return (
-		<div className="space-y-6">
-			{/* Header */}
+		<PageTransition className="space-y-6">
 			<div className="flex items-center gap-3">
-				<Link
-					href="/transactions"
-					className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
-				>
-					<svg
-						className="h-4 w-4"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
-						aria-hidden="true"
-					>
-						<title>Back</title>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M15 19l-7-7 7-7"
-						/>
-					</svg>
-					Back
-				</Link>
-				<h1 className="text-2xl font-bold text-slate-800">Add Transaction</h1>
+				<Button variant="ghost" size="sm" asChild>
+					<Link href="/transactions">
+						<ArrowLeft className="h-4 w-4" />
+						Back
+					</Link>
+				</Button>
+				<h1 className="text-2xl font-bold text-foreground">Add Transaction</h1>
 			</div>
 
 			<div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-				{/* Account selector */}
-				<div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-					<div className="border-b border-slate-200 px-4 py-3">
-						<p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+				<Card>
+					<div className="border-b px-4 py-3">
+						<p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
 							Select Account
 						</p>
 					</div>
@@ -211,168 +251,165 @@ function AddTransactionContent() {
 								onClick={() => setSelectedAccountId(a.id)}
 								className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-3 text-left text-sm transition-colors ${
 									selectedAccountId === a.id
-										? "bg-indigo-50 text-indigo-700 font-medium ring-1 ring-indigo-200"
-										: "text-slate-600 hover:bg-slate-50"
+										? "bg-primary/10 text-primary font-medium ring-1 ring-primary/20"
+										: "text-foreground hover:bg-muted"
 								}`}
 							>
 								<span
-									className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white text-xs font-bold ${TYPE_COLORS[a.type] ?? "bg-slate-400"}`}
+									className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white text-xs font-bold ${TYPE_COLORS[a.type] ?? "bg-muted-foreground"}`}
 								>
 									{a.name.slice(0, 2).toUpperCase()}
 								</span>
 								<div className="min-w-0">
 									<span className="block truncate">{a.name}</span>
-									<span className="block text-xs text-slate-400 capitalize">
+									<span className="block text-xs text-muted-foreground capitalize">
 										{a.type.replace("_", " ")}
 									</span>
 								</div>
 							</button>
 						))}
 					</div>
-				</div>
+				</Card>
 
-				{/* Form + recent transactions */}
 				<div className="space-y-6">
 					{!selectedAccountId ? (
-						<div className="flex items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white p-16">
-							<div className="text-center">
-								<svg
-									className="mx-auto h-10 w-10 text-slate-300"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-									aria-hidden="true"
-								>
-									<title>Select account</title>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={1.5}
-										d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2m-16 0H3m4-8h4m-4 4h4"
-									/>
-								</svg>
-								<p className="mt-2 text-sm text-slate-400">
-									Select an account from the left to begin
-								</p>
-							</div>
-						</div>
+						<Card className="border-dashed border-2">
+							<CardContent className="flex items-center justify-center p-16">
+								<div className="text-center">
+									<Building2 className="mx-auto h-10 w-10 text-muted-foreground/30" />
+									<p className="mt-2 text-sm text-muted-foreground">
+										Select an account from the left to begin
+									</p>
+								</div>
+							</CardContent>
+						</Card>
 					) : (
 						<>
-							{/* Transaction form */}
-							<form
-								onSubmit={handleSubmit(onSubmit)}
-								className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-5"
-							>
-								<h2 className="font-semibold text-slate-800">
-									New Transaction
-								</h2>
-								<div className="grid gap-5 sm:grid-cols-2">
-									<div>
-										<label
-											className="block text-sm font-medium text-slate-600 mb-1.5"
-											htmlFor="tx-type"
-										>
-											Type
-										</label>
-										<select
-											id="tx-type"
-											className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-											{...register("type", { required: true })}
-										>
-											{TRANSACTION_TYPES.map((t) => (
-												<option key={t} value={t}>
-													{t.charAt(0).toUpperCase() + t.slice(1)}
-												</option>
-											))}
-										</select>
-									</div>
-									<div>
-										<label
-											className="block text-sm font-medium text-slate-600 mb-1.5"
-											htmlFor="tx-date"
-										>
-											Date
-										</label>
-										<input
-											id="tx-date"
-											type="date"
-											className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-											{...register("date", { required: true })}
-										/>
-									</div>
-									<div>
-										<label
-											className="block text-sm font-medium text-slate-600 mb-1.5"
-											htmlFor="tx-amount"
-										>
-											Amount (INR)
-										</label>
-										<input
-											id="tx-amount"
-											type="number"
-											step="0.01"
-											min="0.01"
-											className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-											{...register("amountInr", {
-												required: true,
-												min: 0.01,
-											})}
-										/>
-										{errors.amountInr && (
-											<p className="mt-1 text-xs text-red-500">
-												Amount must be &gt; 0
-											</p>
-										)}
-									</div>
-									<div>
-										<label
-											className="block text-sm font-medium text-slate-600 mb-1.5"
-											htmlFor="tx-desc"
-										>
-											Description
-										</label>
-										<input
-											id="tx-desc"
-											type="text"
-											className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-											placeholder="Optional"
-											{...register("description")}
-										/>
-									</div>
-								</div>
-								<div className="flex items-center gap-3 pt-1">
-									<button
-										type="submit"
-										disabled={submitting}
-										className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-									>
-										{submitting ? "Adding\u2026" : "Add Transaction"}
-									</button>
-									<Link
-										href="/transactions"
-										className="rounded-lg px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
-									>
-										Cancel
-									</Link>
-								</div>
-							</form>
+							<Card>
+								<CardContent className="p-6">
+									<form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+										<h2 className="font-semibold text-foreground">
+											New Transaction
+										</h2>
+										<div className="grid gap-5 sm:grid-cols-2">
+											<div>
+												<label
+													className="block text-sm font-medium text-foreground mb-1.5"
+													htmlFor="tx-type"
+												>
+													Type
+												</label>
+												<Controller
+													name="type"
+													control={control}
+													rules={{ required: true }}
+													render={({ field }) => (
+														<Select
+															value={field.value}
+															onValueChange={field.onChange}
+														>
+															<SelectTrigger id="tx-type">
+																<SelectValue placeholder="Select type" />
+															</SelectTrigger>
+															<SelectContent>
+																{TRANSACTION_TYPES.map((t) => (
+																	<SelectItem key={t} value={t}>
+																		{t.charAt(0).toUpperCase() + t.slice(1)}
+																	</SelectItem>
+																))}
+															</SelectContent>
+														</Select>
+													)}
+												/>
+											</div>
+											<div>
+												<label
+													className="block text-sm font-medium text-foreground mb-1.5"
+													htmlFor="tx-date"
+												>
+													Date
+												</label>
+												<Input
+													id="tx-date"
+													type="date"
+													{...register("date", { required: true })}
+												/>
+											</div>
+											<div>
+												<label
+													className="block text-sm font-medium text-foreground mb-1.5"
+													htmlFor="tx-amount"
+												>
+													Amount (INR)
+												</label>
+												<Input
+													id="tx-amount"
+													type="number"
+													step="0.01"
+													min="0.01"
+													{...register("amountInr", {
+														required: true,
+														min: 0.01,
+													})}
+												/>
+												{suggestedEpf !== null &&
+													suggestedEpf > 0 &&
+													accounts.find(
+														(a) => a.id === selectedAccountId && a.type === "epf",
+													) && (
+														<p className="mt-1 text-xs text-muted-foreground">
+															Suggested EPF amount: ₹
+															{suggestedEpf.toFixed(2)}
+														</p>
+													)}
+												{errors.amountInr && (
+													<p className="mt-1 text-xs text-destructive">
+														Amount must be &gt; 0
+													</p>
+												)}
+											</div>
+											<div>
+												<label
+													className="block text-sm font-medium text-foreground mb-1.5"
+													htmlFor="tx-desc"
+												>
+													Description
+												</label>
+												<Input
+													id="tx-desc"
+													type="text"
+													placeholder="Optional"
+													{...register("description")}
+												/>
+											</div>
+										</div>
+										<div className="flex items-center gap-3 pt-1">
+											<Button type="submit" disabled={submitting}>
+												{submitting ? "Adding\u2026" : "Add Transaction"}
+											</Button>
+											<Button variant="ghost" asChild>
+												<Link href="/transactions">Cancel</Link>
+											</Button>
+										</div>
+									</form>
+								</CardContent>
+							</Card>
 
-							{/* Recent transactions for selected account */}
-							<div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-								<div className="border-b border-slate-200 px-5 py-3">
-									<h2 className="font-semibold text-slate-700 text-sm">
+							<Card>
+								<div className="border-b px-5 py-3">
+									<h2 className="font-semibold text-foreground text-sm">
 										Recent Transactions &mdash;{" "}
 										{accounts.find((a) => a.id === selectedAccountId)?.name}
 									</h2>
 								</div>
 								{accountTxns.length === 0 ? (
-									<div className="px-5 py-8 text-center">
-										<p className="text-sm text-slate-400">
+									<CardContent className="py-8 text-center">
+										<p className="text-sm text-muted-foreground">
 											No transactions for this account yet.
 										</p>
-									</div>
+									</CardContent>
 								) : (
-									<div className="divide-y divide-slate-100">
+									<div className="divide-y">
 										{accountTxns.map((tx, i) => (
 											<div
 												key={`${tx.date}-${tx.type}-${i}`}
@@ -382,32 +419,34 @@ function AddTransactionContent() {
 													<span
 														className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
 															tx.type === "investment"
-																? "bg-emerald-50 text-emerald-600"
-																: "bg-red-50 text-red-500"
+																? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+																: "bg-red-500/10 text-red-500 dark:text-red-400"
 														}`}
 													>
 														{tx.type === "investment" ? "\u2191" : "\u2193"}
 													</span>
 													<div>
-														<p className="text-sm font-medium text-slate-700 capitalize">
+														<p className="text-sm font-medium text-foreground capitalize">
 															{tx.type}
 														</p>
-														<p className="text-xs text-slate-400">{tx.date}</p>
+														<p className="text-xs text-muted-foreground">
+															{formatDate(tx.date)}
+														</p>
 													</div>
 												</div>
 												<div className="text-right">
 													<p
 														className={`text-sm font-semibold ${
 															tx.type === "investment"
-																? "text-emerald-600"
-																: "text-red-500"
+																? "text-emerald-600 dark:text-emerald-400"
+																: "text-red-500 dark:text-red-400"
 														}`}
 													>
 														{tx.type === "investment" ? "+" : "-"}
 														{formatInr(tx.amountOrValuePaise)}
 													</p>
 													{tx.description && (
-														<p className="text-xs text-slate-400 truncate max-w-[150px]">
+														<p className="text-xs text-muted-foreground truncate max-w-[150px]">
 															{tx.description}
 														</p>
 													)}
@@ -416,12 +455,12 @@ function AddTransactionContent() {
 										))}
 									</div>
 								)}
-							</div>
+							</Card>
 						</>
 					)}
 				</div>
 			</div>
-		</div>
+		</PageTransition>
 	);
 }
 

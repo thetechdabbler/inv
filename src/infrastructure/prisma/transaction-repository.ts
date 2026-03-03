@@ -112,3 +112,43 @@ export async function getTotalWithdrawalsForAccountIds(
 	});
 	return new Map(w.map((i) => [i.accountId, i._sum.amountPaise ?? 0]));
 }
+
+export async function updateTransaction(
+	id: string,
+	data: {
+		date?: Date;
+		amountPaise?: number;
+		type?: TransactionType;
+		description?: string | null;
+	},
+): Promise<Transaction | null> {
+	const existing = await prisma.transaction.findUnique({ where: { id } });
+	if (!existing) return null;
+	const t = await prisma.transaction.update({
+		where: { id },
+		data: {
+			...(data.date !== undefined && { date: data.date }),
+			...(data.amountPaise !== undefined && { amountPaise: data.amountPaise }),
+			...(data.type !== undefined && { type: data.type }),
+			...(data.description !== undefined && {
+				description: data.description?.trim() ?? null,
+			}),
+		},
+	});
+	return {
+		id: t.id,
+		accountId: t.accountId,
+		date: t.date,
+		amountPaise: t.amountPaise,
+		type: t.type as TransactionType,
+		description: t.description,
+		createdAt: t.createdAt,
+	};
+}
+
+export async function deleteTransaction(id: string): Promise<boolean> {
+	const existing = await prisma.transaction.findUnique({ where: { id } });
+	if (!existing) return false;
+	await prisma.transaction.delete({ where: { id } });
+	return true;
+}

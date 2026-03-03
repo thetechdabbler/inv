@@ -2,9 +2,9 @@
 unit: 001-design-system
 intent: 002-ui-modernization
 phase: inception
-status: ready
-created: 2026-03-03T12:00:00Z
-updated: 2026-03-03T12:00:00Z
+status: complete
+created: 2026-03-03T12:00:00.000Z
+updated: 2026-03-03T12:00:00.000Z
 ---
 
 # Unit Brief: Design System

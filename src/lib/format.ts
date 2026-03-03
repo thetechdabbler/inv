@@ -35,3 +35,16 @@ export function formatInr(paise: number): string {
 		minimumFractionDigits: 0,
 	}).format(paiseToInr(paise));
 }
+
+const dateFormatter = new Intl.DateTimeFormat("en-IN", {
+	day: "numeric",
+	month: "short",
+	year: "numeric",
+});
+
+export function formatDate(iso: string | null | undefined): string {
+	if (!iso) return "";
+	const d = new Date(iso);
+	if (Number.isNaN(d.getTime())) return "";
+	return dateFormatter.format(d);
+}

@@ -169,6 +169,30 @@ Single-user personal application with passphrase-based access control.
 
 ---
 
+### FR-8: Gratuity Valuation from Basic Salary and Joining Date
+- **Description**: Support gratuity account valuation based on current basic salary and joining date, with a clear formula for suggested value and the ability to override the suggestion.
+- **Acceptance Criteria**:
+-  1. For gratuity accounts, the system can compute a suggested valuation using current basic salary (S), joining date (J), and valuation date (D), where years of service Y is the full years between J and D.
+-  2. By default, the suggestion uses the formula Gratuity = (15/26) × S × Y, rounded to two decimal places, and this formula is documented in code and/or requirements.
+-  3. If D ≤ J or Y ≤ 0, the system does not propose a positive gratuity amount and indicates that years of service are insufficient.
+-  4. Users can override the suggested gratuity amount before saving; the stored valuation always reflects the final user-confirmed amount.
+-  5. Helper inputs (salary, joining date) are used for computing the suggestion but are not required to re-derive historical valuations once saved.
+- **Priority**: Should
+- **Related Stories**: 006-gratuity-suggestion, 008-gratuity-valuation-ui
+
+### FR-9: Deterministic Projection Reports from Expected Inputs
+- **Description**: Use each account’s Expected Rate of Return and Expected Investments to generate deterministic projection reports of invested capital, profit, and total value at multiple time granularities, and surface them in a dedicated projections section.
+- **Acceptance Criteria**:
+  1. Each account has Expected annual rate of return (percentage, e.g. 10% p.a.) and Expected recurring investment amount (assume monthly initially), persisted and editable without affecting existing history.
+  2. The system computes projections using a deterministic compound-interest model with regular contributions, deriving a monthly rate from the annual rate (e.g. \( r_m = (1 + r_a)^{1/12} - 1 \)), and for each period calculates projected invested capital, projected profit, and projected total value.
+  3. A Monthly report covers at least the next 12 months, a QoQ report covers at least the next 5 years, and a YoY report covers at least the next 30 years, each with one row per period and the three metrics plus a human-readable period label.
+  4. Users can generate projections for a single account or for the entire portfolio, with portfolio projections aggregating per-account results from the same deterministic engine.
+  5. A non-LLM API endpoint (e.g. `/api/v1/projections`) exposes deterministic projections given scope (portfolio or account), identifier (when needed), and horizon configuration; LLM-based projections remain optional and may consume this baseline but are not required for this feature.
+  6. Validation: with zero expected contributions, projections reduce to compounding current value at the expected rate; with zero expected rate, projections grow linearly with contributions; rounding rules (e.g. two decimal places) are applied consistently.
+  7. All projection views show a clear “estimates only / not financial advice” disclaimer and surface key assumptions (time horizon, expected rate, expected investment) either inline or via a clearly discoverable UI element.
+- **Priority**: Should
+- **Related Stories**: 010-deterministic-projection-engine, 009-projection-reports-section
+
 ## Assumptions
 
 | Assumption | Risk if Invalid | Mitigation |

@@ -21,6 +21,7 @@ function makeAccount(
 
 function makeValuation(date: string, paise: number): HistoryEntry {
   return {
+    id: `val-${date}-${paise}`,
     date,
     type: "valuation",
     amountOrValuePaise: paise,
@@ -34,6 +35,7 @@ describe("buildLineChartData", () => {
     const histories: Record<string, HistoryEntry[]> = {
       a1: [
         {
+          id: "tx-1",
           date: "2026-01-01",
           type: "investment",
           amountOrValuePaise: 100000,
