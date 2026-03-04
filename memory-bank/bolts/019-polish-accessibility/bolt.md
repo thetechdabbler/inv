@@ -21,6 +21,9 @@ stages_completed:
   - name: implement
     completed: 2026-03-03T18:20:00.000Z
     artifact: implementation-walkthrough.md
+  - name: test
+    completed: 2026-03-03T18:25:00.000Z
+    artifact: test-walkthrough.md
 requires_bolts:
   - 016-inline-crud-pagination
   - 017-account-detail-filtering
@@ -60,9 +63,9 @@ Complete the UX improvement intent with quality-of-life enhancements and accessi
 
 ## Stages
 
-- [ ] **1. Plan**: Pending → implementation-plan.md
-- [ ] **2. Implement**: Pending → Source code + implementation-walkthrough.md
-- [ ] **3. Test**: Pending → test-walkthrough.md
+- [x] **1. Plan**: Done → implementation-plan.md
+- [x] **2. Implement**: Done → Source code + implementation-walkthrough.md
+- [x] **3. Test**: Done → test-walkthrough.md (476/476 tests passed)
 
 ## Dependencies
 
@@ -76,15 +79,15 @@ Complete the UX improvement intent with quality-of-life enhancements and accessi
 
 ## Success Criteria
 
-- [ ] Accounts page has search and sort controls
-- [ ] Chat has clear history, copy-to-clipboard, aria-live
-- [ ] Stale accounts show warning badge
-- [ ] File dropzone is keyboard-accessible
-- [ ] Auto-backup offered before import
-- [ ] Logout shows confirmation dialog
-- [ ] Mobile drawer has focus trap, Escape key, proper ARIA
-- [ ] Biome lint passes
-- [ ] TypeScript compiles
+- [x] Accounts page has search and sort controls
+- [x] Chat has clear history, copy-to-clipboard, aria-live
+- [x] Stale accounts show warning badge
+- [x] File dropzone is keyboard-accessible
+- [x] Auto-backup offered before import
+- [x] Logout shows confirmation dialog
+- [x] Mobile drawer has focus trap, Escape key, proper ARIA
+- [x] Biome lint passes
+- [x] TypeScript compiles
 
 ## Notes
 

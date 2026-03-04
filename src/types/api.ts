@@ -84,3 +84,41 @@ export interface InsightsQueryResponse {
 	answer: string;
 	modelUsed: string;
 }
+
+export type ProjectionScope = "portfolio" | "account";
+
+export type ProjectionGranularity = "monthly" | "quarterly" | "yearly";
+
+export interface ProjectionPoint {
+	label: string;
+	periodEndDate: string;
+	investedPaise: number;
+	profitPaise: number;
+	totalValuePaise: number;
+}
+
+export interface ProjectionSeries {
+	granularity: ProjectionGranularity;
+	points: ProjectionPoint[];
+}
+
+export interface ProjectionAssumptions {
+	asOfDate: string;
+	scope: ProjectionScope;
+	accountId?: string;
+	annualRatePercent: number | null;
+	monthlyContributionPaise: number | null;
+	horizonMonths: number;
+	horizonYearsQoq: number;
+	horizonYearsYoy: number;
+}
+
+export interface ProjectionsResponse {
+	series: {
+		monthly: ProjectionSeries;
+		quarterly: ProjectionSeries;
+		yearly: ProjectionSeries;
+	};
+	assumptions: ProjectionAssumptions;
+	disclaimer: string;
+}

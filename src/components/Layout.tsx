@@ -7,6 +7,7 @@ import {
 	Database,
 	DollarSign,
 	FileSpreadsheet,
+	LineChart,
 	Home,
 	Lightbulb,
 	LogOut,
@@ -43,6 +44,7 @@ const NAV_LINKS: NavItem[] = [
 	{ href: "/transactions", label: "Transactions", icon: DollarSign },
 	{ href: "/valuations", label: "Valuations", icon: FileSpreadsheet },
 	{ href: "/charts", label: "Charts", icon: BarChart3 },
+	{ href: "/projections", label: "Projections", icon: LineChart },
 	{ href: "/insights", label: "AI Insights", icon: Lightbulb },
 	{ href: "/data", label: "Import / Export", icon: Database },
 ];

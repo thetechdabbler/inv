@@ -1,9 +1,9 @@
 # Global Story Index
 
 ## Overview
-- **Total stories**: 33
-- **Generated**: 33
-- **Last updated**: 2026-03-02T10:35:00Z
+- **Total stories**: 40
+- **Generated**: 40
+- **Last updated**: 2026-03-04T00:00:00Z
 
 ---
 
@@ -59,17 +59,32 @@
 - [x] **006-responsive-layout** (tracker-ui): Responsive desktop and mobile - Should - ✅ GENERATED
 - [x] **007-llm-chat-interface** (tracker-ui): NL query chat interface - Could - ✅ GENERATED
 
+### 004-ai-insights-improvement
+
+#### Unit: 001-llm-insights-core (4 stories)
+
+- [x] **001-snapshot-builder** (llm-insights-core): Build portfolio snapshot for insights - Must - ✅ GENERATED
+- [x] **002-template-registry** (llm-insights-core): Centralise insight templates and schemas - Must - ✅ GENERATED
+- [x] **003-hybrid-projections** (llm-insights-core): Combine deterministic and LLM projections - Should - ✅ GENERATED
+- [x] **004-guardrails-and-audit** (llm-insights-core): Guardrails and enhanced audit metrics - Should - ✅ GENERATED
+
+#### Unit: 002-insights-ux (3 stories)
+
+- [x] **005-insights-history-list** (insights-ux): Grouped insights history with filters - Should - ✅ GENERATED
+- [x] **006-insight-cards-actions** (insights-ux): Rich insight cards with quick actions - Should - ✅ GENERATED
+- [x] **007-insight-detail-view** (insights-ux): Detail view with narrative + data - Should - ✅ GENERATED
+
 ---
 
 ## Stories by Status
 
 - **Planned**: 0
-- **Generated**: 33
+- **Generated**: 40
 - **In Progress**: 0
 - **Completed**: 0
 
 ## Stories by Priority
 
-- **Must**: 14
-- **Should**: 17
+- **Must**: 16
+- **Should**: 22
 - **Could**: 2

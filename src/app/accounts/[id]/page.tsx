@@ -58,7 +58,9 @@ function OverviewTab({
 						Current Value
 					</p>
 					<p className="mt-1 text-xl font-bold text-foreground">
-						{formatIndian(currentValue)}
+						<span title={formatInr(currentValue)}>
+							{formatIndian(currentValue)}
+						</span>
 					</p>
 				</CardContent>
 			</Card>
@@ -68,7 +70,9 @@ function OverviewTab({
 						Net Invested
 					</p>
 					<p className="mt-1 text-xl font-bold text-foreground">
-						{formatIndian(invested)}
+						<span title={formatInr(invested)}>
+							{formatIndian(invested)}
+						</span>
 					</p>
 				</CardContent>
 			</Card>

@@ -73,7 +73,9 @@ function AccountTile({ account }: { account: AccountListItem }) {
 								Current Value
 							</p>
 							<p className="mt-0.5 text-lg font-bold text-card-foreground">
-								{formatIndian(currentValue)}
+								<span title={formatInr(currentValue)}>
+									{formatIndian(currentValue)}
+								</span>
 							</p>
 						</div>
 						<div>
@@ -81,7 +83,9 @@ function AccountTile({ account }: { account: AccountListItem }) {
 								Invested
 							</p>
 							<p className="mt-0.5 text-lg font-semibold text-muted-foreground">
-								{formatIndian(invested)}
+								<span title={formatInr(invested)}>
+									{formatIndian(invested)}
+								</span>
 							</p>
 						</div>
 					</div>

@@ -437,7 +437,9 @@ function MonthlyReportView({
 							Total Invested
 						</p>
 						<p className="mt-1 text-xl font-bold text-emerald-600 dark:text-emerald-400">
-							{formatIndian(totalInvested)}
+							<span title={formatInr(totalInvested)}>
+								{formatIndian(totalInvested)}
+							</span>
 						</p>
 					</CardContent>
 				</Card>
@@ -447,7 +449,9 @@ function MonthlyReportView({
 							Total Withdrawn
 						</p>
 						<p className="mt-1 text-xl font-bold text-red-500 dark:text-red-400">
-							{formatIndian(totalWithdrawn)}
+							<span title={formatInr(totalWithdrawn)}>
+								{formatIndian(totalWithdrawn)}
+							</span>
 						</p>
 					</CardContent>
 				</Card>
@@ -457,7 +461,9 @@ function MonthlyReportView({
 							Avg Monthly Investment
 						</p>
 						<p className="mt-1 text-xl font-bold text-primary">
-							{formatIndian(Math.round(avgMonthlyInvested))}
+							<span title={formatInr(Math.round(avgMonthlyInvested))}>
+								{formatIndian(Math.round(avgMonthlyInvested))}
+							</span>
 						</p>
 					</CardContent>
 				</Card>

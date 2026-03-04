@@ -401,7 +401,9 @@ function MonthlyReportView({ reports }: { reports: MonthlyReport[] }) {
 							Latest Portfolio Value
 						</p>
 						<p className="mt-1 text-xl font-bold text-primary">
-							{formatIndian(latestReport.totalValuePaise)}
+							<span title={formatInr(latestReport.totalValuePaise)}>
+								{formatIndian(latestReport.totalValuePaise)}
+							</span>
 						</p>
 						<p className="text-xs text-muted-foreground mt-0.5">
 							{latestReport.label}
@@ -418,7 +420,9 @@ function MonthlyReportView({ reports }: { reports: MonthlyReport[] }) {
 								className={`mt-1 text-xl font-bold ${changePaise >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}
 							>
 								{changePaise >= 0 ? "+" : ""}
-								{formatIndian(changePaise)}
+								<span title={formatInr(changePaise)}>
+									{formatIndian(changePaise)}
+								</span>
 							</p>
 						) : (
 							<p className="mt-1 text-xl font-bold text-muted-foreground">

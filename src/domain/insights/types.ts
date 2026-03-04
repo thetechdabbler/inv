@@ -22,6 +22,27 @@ export interface PortfolioSnapshot {
 	profitLossPaise: number;
 	percentReturn: number | null;
 	allocationByType: Record<string, number>; // account type → total value in paise
+	/**
+	 * Optional deterministic projection data (portfolio scope).
+	 * Used to ground LLM projections and commentary.
+	 */
+	deterministicProjections?: {
+		monthly: Array<{ label: string; totalValuePaise: number }>;
+		quarterly: Array<{ label: string; totalValuePaise: number }>;
+		yearly: Array<{ label: string; totalValuePaise: number }>;
+	};
+	/**
+	 * Optional employment/gratuity context for relevant accounts.
+	 */
+	employmentContext?: {
+		gratuityAccounts: Array<{
+			accountId: string;
+			accountName: string;
+			basicSalaryInr: number | null;
+			vpfAmountInr: number | null;
+			joiningDate: string | null;
+		}>;
+	};
 }
 
 export type ProjectionScenarioLabel =

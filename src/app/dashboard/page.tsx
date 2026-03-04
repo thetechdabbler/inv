@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCountUp } from "@/hooks/useCountUp";
 import { apiJson } from "@/lib/api";
 import { TYPE_COLORS } from "@/lib/constants";
-import { formatIndian } from "@/lib/format";
+import { formatIndian, formatInr } from "@/lib/format";
 import type {
 	AccountHistoryResponse,
 	AccountListItem,
@@ -29,6 +29,7 @@ function StatCard({
 	value,
 	accent,
 	sub,
+	isCurrency,
 	index = 0,
 }: {
 	label: string;
@@ -36,6 +37,7 @@ function StatCard({
 	value: string;
 	accent?: string;
 	sub?: React.ReactNode;
+	isCurrency?: boolean;
 	index?: number;
 }) {
 	const animated = useCountUp(rawValue ?? 0, 800, rawValue !== undefined);
@@ -52,7 +54,14 @@ function StatCard({
 				<p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
 					{label}
 				</p>
-				<p className="mt-1 text-2xl font-bold text-foreground">
+				<p
+					className="mt-1 text-2xl font-bold text-foreground"
+					title={
+						isCurrency && rawValue !== undefined
+							? formatInr(rawValue)
+							: undefined
+					}
+				>
 					{rawValue !== undefined ? formatIndian(animated) : value}
 				</p>
 				{sub && <div className="mt-1">{sub}</div>}
@@ -134,7 +143,9 @@ function TopAccountCard({
 			</div>
 			<div className="text-right">
 				<p className="font-semibold text-card-foreground text-sm">
-					{formatIndian(currentValue)}
+					<span title={formatInr(currentValue)}>
+						{formatIndian(currentValue)}
+					</span>
 				</p>
 				<div className="mt-1 flex items-center justify-end gap-1">
 					<Badge
@@ -302,6 +313,7 @@ function DashboardContent() {
 							rawValue={totalValue}
 							value={formatIndian(totalValue)}
 							accent="bg-primary"
+							isCurrency
 							index={0}
 						/>
 						<StatCard
@@ -309,6 +321,7 @@ function DashboardContent() {
 							rawValue={perf.netInvestedPaise}
 							value={formatIndian(perf.netInvestedPaise)}
 							accent="bg-blue-500"
+							isCurrency
 							index={1}
 						/>
 						<StatCard
@@ -318,6 +331,7 @@ function DashboardContent() {
 							accent={
 								perf.profitLossPaise >= 0 ? "bg-emerald-500" : "bg-red-500"
 							}
+							isCurrency
 							index={2}
 							sub={
 								perf.percentReturn != null ? (
