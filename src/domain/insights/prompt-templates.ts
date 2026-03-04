@@ -1,4 +1,8 @@
 /**
+ * @deprecated Use `src/domain/insights/template-registry.ts` instead (bolt 022).
+ * This file is superseded by the versioned InsightTemplate registry and will be
+ * removed once all consumers have been migrated.
+ *
  * Prompt templates for LLM insights (bolt 005-llm-insights).
  * Stored as in-memory typed functions for Next.js compatibility.
  * Token-optimised: only aggregate data, no PII, rounded INR values.

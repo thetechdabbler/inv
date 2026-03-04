@@ -9,6 +9,9 @@ import { getPortfolioPerformance } from "@/application/portfolio/get-portfolio-p
 import { listAccounts } from "@/application/portfolio/list-accounts";
 import type { PortfolioSnapshot } from "@/domain/insights/types";
 import { findByAccountId as findEmploymentByAccountId } from "@/infrastructure/prisma/employment-info-repository";
+import { getLatestValuationDatesForAccountIds } from "@/infrastructure/prisma/valuation-repository";
+
+const STALE_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 export async function buildPortfolioSnapshot(): Promise<PortfolioSnapshot> {
 	const [accounts, performance] = await Promise.all([
@@ -22,7 +25,9 @@ export async function buildPortfolioSnapshot(): Promise<PortfolioSnapshot> {
 			(allocationByType[account.type] ?? 0) + account.currentValuePaise;
 	}
 
-	// Deterministic projections for the whole portfolio (moderate horizons for LLM context).
+	const accountIds = accounts.map((a) => a.id);
+
+	// Fetch all three in parallel: projections, employment info, valuation dates for staleness.
 	const projectionsPromise = computePortfolioProjections({
 		scope: "portfolio",
 		horizonMonths: 12,
@@ -30,7 +35,6 @@ export async function buildPortfolioSnapshot(): Promise<PortfolioSnapshot> {
 		horizonYearsYoy: 30,
 	});
 
-	// Employment/gratuity context for gratuity accounts, if any.
 	const gratuityAccounts = accounts.filter((a) => a.type === "gratuity");
 	const employmentInfosPromise = Promise.all(
 		gratuityAccounts.map(async (acc) => {
@@ -39,18 +43,30 @@ export async function buildPortfolioSnapshot(): Promise<PortfolioSnapshot> {
 		}),
 	);
 
-	const [projections, employmentInfos] = await Promise.all([
+	const latestDatesPromise = getLatestValuationDatesForAccountIds(accountIds);
+
+	const [projections, employmentInfos, latestDates] = await Promise.all([
 		projectionsPromise,
 		employmentInfosPromise,
+		latestDatesPromise,
 	]);
 
+	const now = Date.now();
 	const snapshot: PortfolioSnapshot = {
-		accounts: accounts.map((a) => ({
-			type: a.type,
-			name: a.name,
-			currentValuePaise: a.currentValuePaise,
-			totalContributionsPaise: a.totalContributionsPaise,
-		})),
+		snapshotAt: new Date(now).toISOString(),
+		accounts: accounts.map((a) => {
+			const lastDate = latestDates.get(a.id) ?? null;
+			return {
+				type: a.type,
+				name: a.name,
+				currentValuePaise: a.currentValuePaise,
+				totalContributionsPaise: a.totalContributionsPaise,
+				lastValuationAt: lastDate?.toISOString() ?? null,
+				isStale: lastDate
+					? now - lastDate.getTime() > STALE_THRESHOLD_MS
+					: true,
+			};
+		}),
 		totalValuePaise: performance.currentValuePaise,
 		netInvestedPaise: performance.netInvestedPaise,
 		profitLossPaise: performance.profitLossPaise,

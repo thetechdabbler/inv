@@ -44,3 +44,51 @@ export function buildAllocationSummary(
 		.map(([type, paise]) => `${type}: ₹${paiseToINR(paise)}`)
 		.join(", ");
 }
+
+/**
+ * Builds a flat render context from a PortfolioSnapshot for use with
+ * renderTemplate(). Merges optional runtime params (e.g., question, timeHorizonYears)
+ * that override or supplement snapshot-derived values.
+ */
+export function buildRenderContext(
+	snapshot: PortfolioSnapshot,
+	params?: Record<string, string>,
+): Record<string, string> {
+	const projectionsSummary = snapshot.deterministicProjections
+		? snapshot.deterministicProjections.yearly
+				.slice(0, 3)
+				.map((p) => `${p.label}: ₹${paiseToINR(p.totalValuePaise)}`)
+				.join(", ")
+		: "Not available";
+
+	const emp = snapshot.employmentContext?.gratuityAccounts?.[0];
+	const yearsOfService = emp?.joiningDate
+		? ((Date.now() - new Date(emp.joiningDate).getTime()) /
+				(365.25 * 24 * 60 * 60 * 1000))
+				.toFixed(1)
+		: "N/A";
+
+	const allocationSummary = buildAllocationSummary(snapshot.allocationByType);
+
+	const ctx: Record<string, string> = {
+		totalValueINR: paiseToINR(snapshot.totalValuePaise),
+		netInvestedINR: paiseToINR(snapshot.netInvestedPaise),
+		profitLossINR: paiseToINR(snapshot.profitLossPaise),
+		percentReturn: formatPercent(snapshot.percentReturn),
+		accountCount: String(snapshot.accounts.length),
+		accountSummary: buildAccountSummary(snapshot.accounts),
+		allocationSummary,
+		currentAllocationSummary: allocationSummary,
+		snapshotAt: snapshot.snapshotAt ?? new Date().toISOString(),
+		hasProjections: snapshot.deterministicProjections ? "true" : "false",
+		projectionsSummary,
+		hasEmployment: snapshot.employmentContext ? "true" : "false",
+		basicSalaryINR:
+			emp?.basicSalaryInr != null ? String(emp.basicSalaryInr) : "N/A",
+		joiningDate: emp?.joiningDate ?? "N/A",
+		gratuityAccountName: emp?.accountName ?? "N/A",
+		yearsOfService,
+	};
+
+	return params ? { ...ctx, ...params } : ctx;
+}

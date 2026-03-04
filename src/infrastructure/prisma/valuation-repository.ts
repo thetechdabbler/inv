@@ -94,6 +94,23 @@ export async function getLatestValuesForAccountIds(
 	return map;
 }
 
+/** Returns the date of the most recent valuation for each account id. */
+export async function getLatestValuationDatesForAccountIds(
+	accountIds: string[],
+): Promise<Map<string, Date>> {
+	if (accountIds.length === 0) return new Map();
+	const map = new Map<string, Date>();
+	for (const accountId of accountIds) {
+		const v = await prisma.valuation.findFirst({
+			where: { accountId },
+			orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+			select: { date: true },
+		});
+		if (v) map.set(accountId, v.date);
+	}
+	return map;
+}
+
 export async function updateValuation(
 	id: string,
 	data: { date?: Date; valuePaise?: number },

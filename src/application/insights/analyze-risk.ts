@@ -3,13 +3,12 @@
  * Expects JSON response; parses and validates severity/description/mitigation.
  */
 
-import {
-	buildAllocationSummary,
-	formatPercent,
-	paiseToINR,
-} from "@/application/insights/snapshot-formatter";
+import { buildRenderContext } from "@/application/insights/snapshot-formatter";
 import type { LLMGatewayPort } from "@/domain/insights/llm-gateway";
-import { PROMPT_TEMPLATES } from "@/domain/insights/prompt-templates";
+import {
+	getTemplate,
+	renderTemplate,
+} from "@/domain/insights/template-registry";
 import type {
 	PortfolioSnapshot,
 	RiskFactor,
@@ -55,15 +54,9 @@ export async function analyzeRisk(
 	snapshot: PortfolioSnapshot,
 	gateway: LLMGatewayPort,
 ): Promise<RiskResult> {
-	const prompt = PROMPT_TEMPLATES.risk({
-		totalValueINR: paiseToINR(snapshot.totalValuePaise),
-		profitLossINR: paiseToINR(snapshot.profitLossPaise),
-		percentReturn: formatPercent(snapshot.percentReturn),
-		accountCount: snapshot.accounts.length,
-		allocationSummary: buildAllocationSummary(snapshot.allocationByType),
-	});
-
-	const response = await gateway.complete(prompt);
+	const template = getTemplate("risk-analysis");
+	const prompt = renderTemplate(template, buildRenderContext(snapshot));
+	const response = await gateway.complete(prompt, { insightType: "risk-analysis" });
 	const riskFactors = parseRiskJson(response.text);
 	return { riskFactors, modelUsed: response.modelUsed };
 }

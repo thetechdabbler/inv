@@ -3,14 +3,12 @@
  * Injects portfolio context and returns LLM answer text.
  */
 
-import {
-	buildAccountSummary,
-	buildAllocationSummary,
-	formatPercent,
-	paiseToINR,
-} from "@/application/insights/snapshot-formatter";
+import { buildRenderContext } from "@/application/insights/snapshot-formatter";
 import type { LLMGatewayPort } from "@/domain/insights/llm-gateway";
-import { PROMPT_TEMPLATES } from "@/domain/insights/prompt-templates";
+import {
+	getTemplate,
+	renderTemplate,
+} from "@/domain/insights/template-registry";
 import type { NLQueryResult, PortfolioSnapshot } from "@/domain/insights/types";
 
 export const MAX_QUESTION_LENGTH = 1000;
@@ -37,15 +35,13 @@ export async function processNLQuery(
 		);
 	}
 
-	const prompt = PROMPT_TEMPLATES.query({
-		question: trimmed,
-		totalValueINR: paiseToINR(snapshot.totalValuePaise),
-		netInvestedINR: paiseToINR(snapshot.netInvestedPaise),
-		percentReturn: formatPercent(snapshot.percentReturn),
-		allocationSummary: buildAllocationSummary(snapshot.allocationByType),
-		accountSummary: buildAccountSummary(snapshot.accounts),
+	const template = getTemplate("natural-language-query");
+	const prompt = renderTemplate(
+		template,
+		buildRenderContext(snapshot, { question: trimmed }),
+	);
+	const response = await gateway.complete(prompt, {
+		insightType: "natural-language-query",
 	});
-
-	const response = await gateway.complete(prompt, { insightType: "query" });
 	return { answer: response.text.trim(), modelUsed: response.modelUsed };
 }

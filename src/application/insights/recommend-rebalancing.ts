@@ -3,12 +3,12 @@
  * Expects JSON response with actions array + narrative.
  */
 
-import {
-	buildAllocationSummary,
-	paiseToINR,
-} from "@/application/insights/snapshot-formatter";
+import { buildRenderContext } from "@/application/insights/snapshot-formatter";
 import type { LLMGatewayPort } from "@/domain/insights/llm-gateway";
-import { PROMPT_TEMPLATES } from "@/domain/insights/prompt-templates";
+import {
+	getTemplate,
+	renderTemplate,
+} from "@/domain/insights/template-registry";
 import type {
 	PortfolioSnapshot,
 	RebalancingAction,
@@ -110,24 +110,21 @@ export async function recommendRebalancing(
 		if (err) throw err;
 	}
 
-	const currentAllocationSummary = buildAllocationSummary(
-		snapshot.allocationByType,
-	);
 	const targetAllocationSummary = targetAllocation
 		? Object.entries(targetAllocation)
 				.map(([type, pct]) => `${type}: ${Math.round(pct * 100)}%`)
 				.join(", ")
 		: null;
+	const targetAllocationSection = targetAllocationSummary
+		? `Target allocation: ${targetAllocationSummary}`
+		: "No target allocation set — suggest a reasonable target for an Indian retail investor.";
 
-	const prompt = PROMPT_TEMPLATES.rebalancing({
-		totalValueINR: paiseToINR(snapshot.totalValuePaise),
-		currentAllocationSummary,
-		targetAllocationSummary,
-	});
-
-	const response = await gateway.complete(prompt, {
-		insightType: "rebalancing",
-	});
+	const template = getTemplate("rebalancing");
+	const prompt = renderTemplate(
+		template,
+		buildRenderContext(snapshot, { targetAllocationSection }),
+	);
+	const response = await gateway.complete(prompt, { insightType: "rebalancing" });
 	const parsed = parseRebalancingJson(response.text);
 
 	return {

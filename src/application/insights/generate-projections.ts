@@ -3,12 +3,12 @@
  * Expects JSON response from LLM; parses and validates before returning.
  */
 
-import {
-	buildAllocationSummary,
-	paiseToINR,
-} from "@/application/insights/snapshot-formatter";
+import { buildRenderContext } from "@/application/insights/snapshot-formatter";
 import type { LLMGatewayPort } from "@/domain/insights/llm-gateway";
-import { PROMPT_TEMPLATES } from "@/domain/insights/prompt-templates";
+import {
+	getTemplate,
+	renderTemplate,
+} from "@/domain/insights/template-registry";
 import type {
 	PortfolioSnapshot,
 	ProjectionsResult,
@@ -64,14 +64,14 @@ export async function generateProjections(
 		);
 	}
 
-	const prompt = PROMPT_TEMPLATES.projections({
-		timeHorizonYears,
-		totalValueINR: paiseToINR(snapshot.totalValuePaise),
-		netInvestedINR: paiseToINR(snapshot.netInvestedPaise),
-		allocationSummary: buildAllocationSummary(snapshot.allocationByType),
+	const template = getTemplate("future-projections");
+	const prompt = renderTemplate(
+		template,
+		buildRenderContext(snapshot, { timeHorizonYears: String(timeHorizonYears) }),
+	);
+	const response = await gateway.complete(prompt, {
+		insightType: "future-projections",
 	});
-
-	const response = await gateway.complete(prompt);
 	const parsed = parseProjectionsJson(response.text);
 
 	return {

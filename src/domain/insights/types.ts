@@ -4,11 +4,13 @@
  */
 
 export type InsightType =
-	| "summary"
-	| "projections"
-	| "risk"
+	| "portfolio-summary"
+	| "future-projections"
+	| "risk-analysis"
 	| "rebalancing"
-	| "query";
+	| "natural-language-query"
+	| "projection-quality-review"
+	| "retirement-readiness";
 
 export interface PortfolioSnapshot {
 	accounts: Array<{
@@ -16,7 +18,13 @@ export interface PortfolioSnapshot {
 		name: string;
 		currentValuePaise: number;
 		totalContributionsPaise: number;
+		/** ISO date string of last valuation, or null if no valuation recorded. */
+		lastValuationAt?: string | null;
+		/** True when last valuation is older than 30 days or absent. */
+		isStale?: boolean;
 	}>;
+	/** ISO timestamp when this snapshot was assembled. */
+	snapshotAt?: string;
 	totalValuePaise: number;
 	netInvestedPaise: number;
 	profitLossPaise: number;
