@@ -40,7 +40,12 @@ export class OpenAIGateway implements LLMGatewayPort {
 				{ timeout: options?.timeoutMs ?? DEFAULT_TIMEOUT_MS },
 			);
 			const text = response.choices[0]?.message?.content ?? "";
-			return { text, modelUsed: response.model };
+			return {
+				text,
+				modelUsed: response.model,
+				promptTokens: response.usage?.prompt_tokens ?? null,
+				completionTokens: response.usage?.completion_tokens ?? null,
+			};
 		} catch (e) {
 			if (e instanceof APIError) {
 				throw new LLMUnavailableError(

@@ -1,15 +1,11 @@
 /**
  * POST /api/v1/insights/projections
- * Generate future portfolio value projections (optimistic/expected/conservative).
- * Body: { timeHorizonYears: number } — integer 1–30.
+ * Generate hybrid portfolio projections: deterministic series + LLM narrative.
+ * Body: {} (no parameters required — snapshot provides the projection horizon).
+ * Returns HybridProjectionResult (bolt 023).
  */
 
-import {
-	MAX_TIME_HORIZON_YEARS,
-	MIN_TIME_HORIZON_YEARS,
-	ProjectionsValidationError,
-	generateProjections,
-} from "@/application/insights/generate-projections";
+import { generateHybridProjection } from "@/application/insights/generate-hybrid-projection";
 import { LLMAuditService } from "@/application/insights/llm-audit-service";
 import { buildPortfolioSnapshot } from "@/application/insights/snapshot-builder";
 import { LLMUnavailableError } from "@/domain/insights/llm-gateway";
@@ -17,14 +13,7 @@ import { AuditingLLMGateway } from "@/infrastructure/openai/auditing-llm-gateway
 import { OpenAIGateway } from "@/infrastructure/openai/openai-gateway";
 import { NextResponse } from "next/server";
 
-function validationError(message: string) {
-	return NextResponse.json(
-		{ code: "VALIDATION_ERROR", message },
-		{ status: 400 },
-	);
-}
-
-export async function POST(request: Request) {
+export async function POST() {
 	if (!process.env.OPENAI_API_KEY) {
 		return NextResponse.json(
 			{
@@ -36,41 +25,21 @@ export async function POST(request: Request) {
 	}
 
 	try {
-		const body = (await request.json()) as unknown;
-		if (!body || typeof body !== "object") {
-			return validationError("Request body must be a JSON object");
-		}
-		const { timeHorizonYears } = body as Record<string, unknown>;
-		if (
-			typeof timeHorizonYears !== "number" ||
-			!Number.isInteger(timeHorizonYears) ||
-			timeHorizonYears < MIN_TIME_HORIZON_YEARS ||
-			timeHorizonYears > MAX_TIME_HORIZON_YEARS
-		) {
-			return validationError(
-				`timeHorizonYears must be an integer between ${MIN_TIME_HORIZON_YEARS} and ${MAX_TIME_HORIZON_YEARS}`,
-			);
-		}
-
 		const snapshot = await buildPortfolioSnapshot();
 		if (snapshot.accounts.length === 0) {
-			return validationError("Add accounts first to generate insights");
+			return NextResponse.json(
+				{ code: "VALIDATION_ERROR", message: "Add accounts first to generate insights" },
+				{ status: 400 },
+			);
 		}
 
 		const gateway = new AuditingLLMGateway(
 			new OpenAIGateway(),
 			new LLMAuditService(),
 		);
-		const result = await generateProjections(
-			snapshot,
-			timeHorizonYears,
-			gateway,
-		);
+		const result = await generateHybridProjection(snapshot, gateway);
 		return NextResponse.json(result);
 	} catch (e) {
-		if (e instanceof ProjectionsValidationError) {
-			return validationError(e.message);
-		}
 		if (e instanceof LLMUnavailableError) {
 			return NextResponse.json(
 				{

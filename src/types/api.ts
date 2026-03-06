@@ -1,5 +1,6 @@
 /**
  * API response types for UI (bolt 009).
+ * Bolt 023: HybridProjectionResult replaces the LLM-only ProjectionsResponse for /insights/projections.
  */
 
 export interface AuthStatus {
@@ -121,4 +122,37 @@ export interface ProjectionsResponse {
 	};
 	assumptions: ProjectionAssumptions;
 	disclaimer: string;
+}
+
+/** Bolt 023: combined deterministic + LLM projection insight. Returned by POST /api/v1/insights/projections. */
+export interface HybridProjectionResult {
+	/** Yearly projection series from the deterministic engine, or null when no projections are available. */
+	deterministicData: {
+		granularity: "yearly";
+		points: Array<{ label: string; totalValuePaise: number }>;
+	} | null;
+	/** LLM-authored narrative — post-processed with guardrails and disclaimer appended. */
+	llmNarrative: string;
+	/** Qualitative assumptions attributed to the LLM response. */
+	assumptions: string[];
+	/** INSIGHT_DISCLAIMER constant — always present. */
+	disclaimer: string;
+	modelUsed: string;
+}
+
+/** Bolt 023: raw audit pair for a single LLM call. Returned by GET /api/v1/insights/debug/:auditId. */
+export interface DebugAuditViewResponse {
+	auditId: string;
+	insightType: string;
+	prompt: string;
+	responseText: string;
+	modelUsed: string;
+	promptTokens: number | null;
+	completionTokens: number | null;
+	durationMs: number | null;
+	templateId: string | null;
+	templateVersion: string | null;
+	success: boolean;
+	errorMessage: string | null;
+	createdAt: string;
 }

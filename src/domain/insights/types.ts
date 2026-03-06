@@ -74,6 +74,7 @@ export interface RiskFactor {
 export interface SummaryResult {
 	summary: string;
 	modelUsed?: string;
+	disclaimer?: string;
 }
 
 export interface ProjectionsResult {
@@ -87,6 +88,7 @@ export interface ProjectionsResult {
 export interface RiskResult {
 	riskFactors: RiskFactor[];
 	modelUsed?: string;
+	disclaimer?: string;
 }
 
 // Bolt 006 ────────────────────────────────────────────────────────────────────
@@ -101,11 +103,48 @@ export interface RebalancingResult {
 	actions: RebalancingAction[];
 	narrative: string;
 	modelUsed?: string;
+	disclaimer?: string;
 }
 
 export interface NLQueryResult {
 	answer: string;
 	modelUsed?: string;
+	disclaimer?: string;
+}
+
+// Bolt 023 ────────────────────────────────────────────────────────────────────
+
+/** Combined output of a projection insight: deterministic series + LLM narrative. */
+export interface HybridProjectionResult {
+	/** Yearly projection series from the deterministic engine, or null when no projections are available. */
+	deterministicData: {
+		granularity: "yearly";
+		points: Array<{ label: string; totalValuePaise: number }>;
+	} | null;
+	/** LLM-authored narrative — post-processed and with disclaimer appended. */
+	llmNarrative: string;
+	/** Qualitative assumptions extracted from or attributed to the LLM response. */
+	assumptions: string[];
+	/** INSIGHT_DISCLAIMER constant — always present. */
+	disclaimer: string;
+	modelUsed: string;
+}
+
+/** Read-only projection for the debug endpoint — raw audit pair for a single LLM call. */
+export interface DebugAuditView {
+	auditId: string;
+	insightType: string;
+	prompt: string;
+	responseText: string;
+	modelUsed: string;
+	promptTokens: number | null;
+	completionTokens: number | null;
+	durationMs: number | null;
+	templateId: string | null;
+	templateVersion: string | null;
+	success: boolean;
+	errorMessage: string | null;
+	createdAt: string;
 }
 
 export interface LLMInteractionRecord {

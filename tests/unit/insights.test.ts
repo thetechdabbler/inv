@@ -146,7 +146,8 @@ describe("generateSummary", () => {
 	it("should return trimmed summary text and modelUsed", async () => {
 		const gateway = makeMockGateway("  Your portfolio looks healthy.  ");
 		const result = await generateSummary(snapshot, gateway);
-		expect(result.summary).toBe("Your portfolio looks healthy.");
+		expect(result.summary).toContain("Your portfolio looks healthy.");
+		expect(result.summary).toContain("⚠️"); // disclaimer appended (bolt 023)
 		expect(result.modelUsed).toBe("gpt-4o-mini");
 	});
 
@@ -446,7 +447,8 @@ describe("processNLQuery — result", () => {
 			snapshot,
 			gateway,
 		);
-		expect(result.answer).toBe("Your return is 16.3%.");
+		expect(result.answer).toContain("Your return is 16.3%.");
+		expect(result.answer).toContain("⚠️"); // disclaimer appended (bolt 023)
 		expect(result.modelUsed).toBe("gpt-4o-mini");
 	});
 

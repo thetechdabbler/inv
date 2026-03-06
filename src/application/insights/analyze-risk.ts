@@ -4,7 +4,11 @@
  */
 
 import { buildRenderContext } from "@/application/insights/snapshot-formatter";
+import {
+	INSIGHT_DISCLAIMER,
+} from "@/domain/insights/disclaimer";
 import type { LLMGatewayPort } from "@/domain/insights/llm-gateway";
+import { applyPostProcessing } from "@/domain/insights/post-processing";
 import {
 	getTemplate,
 	renderTemplate,
@@ -56,7 +60,17 @@ export async function analyzeRisk(
 ): Promise<RiskResult> {
 	const template = getTemplate("risk-analysis");
 	const prompt = renderTemplate(template, buildRenderContext(snapshot));
-	const response = await gateway.complete(prompt, { insightType: "risk-analysis" });
+	const response = await gateway.complete(prompt, {
+		insightType: "risk-analysis",
+		templateId: template.id,
+		templateVersion: template.version,
+	});
 	const riskFactors = parseRiskJson(response.text);
-	return { riskFactors, modelUsed: response.modelUsed };
+	// Post-processing applies to string fields only — not the full JSON blob
+	const processed = riskFactors.map((f) => ({
+		...f,
+		description: applyPostProcessing(f.description),
+		mitigation: f.mitigation ? applyPostProcessing(f.mitigation) : undefined,
+	}));
+	return { riskFactors: processed, modelUsed: response.modelUsed, disclaimer: INSIGHT_DISCLAIMER };
 }

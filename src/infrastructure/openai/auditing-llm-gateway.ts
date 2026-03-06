@@ -32,22 +32,31 @@ export class AuditingLLMGateway implements LLMGatewayPort {
 			insightType,
 			prompt,
 			modelRequested,
+			templateId: options?.templateId,
+			templateVersion: options?.templateVersion,
 		});
 
+		const startTime = Date.now();
 		try {
 			const response = await this.inner.complete(prompt, options);
+			const durationMs = Date.now() - startTime;
 			await this.auditService.logResponse({
 				queryId: query.id,
 				responseText: response.text,
 				modelUsed: response.modelUsed,
+				promptTokens: response.promptTokens,
+				completionTokens: response.completionTokens,
+				durationMs,
 				success: true,
 			});
 			return response;
 		} catch (e) {
+			const durationMs = Date.now() - startTime;
 			await this.auditService.logResponse({
 				queryId: query.id,
 				responseText: "",
 				modelUsed: modelRequested,
+				durationMs,
 				success: false,
 				errorMessage: e instanceof Error ? e.message : String(e),
 			});

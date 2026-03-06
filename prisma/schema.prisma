@@ -130,12 +130,15 @@ model AccessLog {
 
 // Bolt 006: LLM interaction audit trail
 model LLMQuery {
-  id             String       @id @default(cuid())
-  insightType    String       @map("insight_type") // summary|projections|risk|rebalancing|query
-  prompt         String
-  modelRequested String       @map("model_requested")
-  createdAt      DateTime     @default(now()) @map("created_at")
-  response       LLMResponse?
+  id              String       @id @default(cuid())
+  insightType     String       @map("insight_type") // summary|projections|risk|rebalancing|query
+  prompt          String
+  modelRequested  String       @map("model_requested")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  // Bolt 023: template provenance — nullable for backwards compat
+  templateId      String?      @map("template_id")
+  templateVersion String?      @map("template_version")
+  response        LLMResponse?
 
   @@index([insightType])
   @@index([createdAt])
@@ -143,15 +146,19 @@ model LLMQuery {
 }
 
 model LLMResponse {
-  id           String    @id @default(cuid())
-  queryId      String    @unique @map("query_id")
-  responseText String    @map("response_text")
-  modelUsed    String    @map("model_used")
-  tokensUsed   Int?      @map("tokens_used")
-  success      Boolean
-  errorMessage String?   @map("error_message")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  query        LLMQuery  @relation(fields: [queryId], references: [id], onDelete: Cascade)
+  id               String    @id @default(cuid())
+  queryId          String    @unique @map("query_id")
+  responseText     String    @map("response_text")
+  modelUsed        String    @map("model_used")
+  tokensUsed       Int?      @map("tokens_used")
+  success          Boolean
+  errorMessage     String?   @map("error_message")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  // Bolt 023: telemetry — nullable for backwards compat
+  promptTokens     Int?      @map("prompt_tokens")
+  completionTokens Int?      @map("completion_tokens")
+  durationMs       Int?      @map("duration_ms")
+  query            LLMQuery  @relation(fields: [queryId], references: [id], onDelete: Cascade)
 
   @@index([queryId])
   @@map("llm_responses")

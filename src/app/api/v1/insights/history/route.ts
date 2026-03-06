@@ -12,6 +12,9 @@ export async function GET(request: Request) {
 		const url = new URL(request.url);
 		const limitParam = url.searchParams.get("limit");
 		const offsetParam = url.searchParams.get("offset");
+		const typeParam = url.searchParams.get("type");
+		const fromParam = url.searchParams.get("from");
+		const toParam = url.searchParams.get("to");
 
 		const limit = limitParam
 			? Math.min(Math.max(Number.parseInt(limitParam, 10) || 20, 1), 100)
@@ -20,7 +23,16 @@ export async function GET(request: Request) {
 			? Math.max(Number.parseInt(offsetParam, 10) || 0, 0)
 			: 0;
 
-		const { records, total } = await findAllLLMQueries({ limit, offset });
+		const from = fromParam ? new Date(fromParam) : undefined;
+		const to = toParam ? new Date(`${toParam}T23:59:59.999Z`) : undefined;
+
+		const { records, total } = await findAllLLMQueries({
+			limit,
+			offset,
+			type: typeParam ?? undefined,
+			from: from && !Number.isNaN(from.getTime()) ? from : undefined,
+			to: to && !Number.isNaN(to.getTime()) ? to : undefined,
+		});
 
 		const interactions = records.map((r) => ({
 			id: r.id,

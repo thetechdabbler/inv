@@ -11,6 +11,8 @@ export class LLMAuditService {
 		insightType: string;
 		prompt: string;
 		modelRequested: string;
+		templateId?: string | null;
+		templateVersion?: string | null;
 	}): Promise<{ id: string }> {
 		return llmQueryRepo.createLLMQuery(input);
 	}
@@ -20,6 +22,9 @@ export class LLMAuditService {
 		responseText: string;
 		modelUsed: string;
 		tokensUsed?: number | null;
+		promptTokens?: number | null;
+		completionTokens?: number | null;
+		durationMs?: number | null;
 		success: boolean;
 		errorMessage?: string | null;
 	}): Promise<void> {

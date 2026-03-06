@@ -3,7 +3,12 @@
  */
 
 import { buildRenderContext } from "@/application/insights/snapshot-formatter";
+import {
+	INSIGHT_DISCLAIMER,
+	appendDisclaimer,
+} from "@/domain/insights/disclaimer";
 import type { LLMGatewayPort } from "@/domain/insights/llm-gateway";
+import { applyPostProcessing } from "@/domain/insights/post-processing";
 import {
 	getTemplate,
 	renderTemplate,
@@ -18,6 +23,10 @@ export async function generateSummary(
 	const prompt = renderTemplate(template, buildRenderContext(snapshot));
 	const response = await gateway.complete(prompt, {
 		insightType: "portfolio-summary",
+		templateId: template.id,
+		templateVersion: template.version,
 	});
-	return { summary: response.text.trim(), modelUsed: response.modelUsed };
+	const processed = applyPostProcessing(response.text.trim());
+	const summary = appendDisclaimer(processed);
+	return { summary, modelUsed: response.modelUsed, disclaimer: INSIGHT_DISCLAIMER };
 }

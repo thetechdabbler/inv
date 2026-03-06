@@ -76,14 +76,8 @@ function mockGatewayError(error: Error) {
 	);
 }
 
-function postProjections(body: unknown) {
-	return POST_PROJECTIONS(
-		new Request("http://localhost/api/v1/insights/projections", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(body),
-		}),
-	);
+function postProjections() {
+	return POST_PROJECTIONS();
 }
 
 function postRebalancing(body: unknown) {
@@ -160,7 +154,8 @@ describe("GET /api/v1/insights/summary", () => {
 		const res = await GET_SUMMARY();
 		expect(res.status).toBe(200);
 		const data = (await res.json()) as { summary: string; modelUsed: string };
-		expect(data.summary).toBe("Your portfolio is healthy.");
+		expect(data.summary).toContain("Your portfolio is healthy.");
+		expect(data.summary).toContain("⚠️"); // disclaimer appended
 		expect(data.modelUsed).toBe("gpt-4o-mini");
 	});
 
@@ -176,76 +171,69 @@ describe("GET /api/v1/insights/summary", () => {
 	});
 });
 
-// ── POST /api/v1/insights/projections ────────────────────────────────────────
-
-const validProjectionsResponse = JSON.stringify({
-	optimistic: { narrative: "Optimistic: ₹40L in 10 years." },
-	expected: { narrative: "Expected: ₹30L in 10 years." },
-	conservative: { narrative: "Conservative: ₹20L in 10 years." },
-});
+// ── POST /api/v1/insights/projections (bolt 023: HybridProjectionResult) ─────
 
 describe("POST /api/v1/insights/projections", () => {
 	it("should return 503 when OPENAI_API_KEY is not set", async () => {
 		process.env.OPENAI_API_KEY = "";
-		const res = await postProjections({ timeHorizonYears: 10 });
+		const res = await postProjections();
 		expect(res.status).toBe(503);
 		const data = (await res.json()) as { code: string };
 		expect(data.code).toBe("SERVICE_UNAVAILABLE");
 	});
 
-	it("should return 400 for missing timeHorizonYears", async () => {
-		process.env.OPENAI_API_KEY = "test-key";
-		const res = await postProjections({});
-		expect(res.status).toBe(400);
-		const data = (await res.json()) as { code: string };
-		expect(data.code).toBe("VALIDATION_ERROR");
-	});
-
-	it("should return 400 for timeHorizonYears = 0", async () => {
-		process.env.OPENAI_API_KEY = "test-key";
-		const res = await postProjections({ timeHorizonYears: 0 });
-		expect(res.status).toBe(400);
-	});
-
-	it("should return 400 for timeHorizonYears = 31", async () => {
-		process.env.OPENAI_API_KEY = "test-key";
-		const res = await postProjections({ timeHorizonYears: 31 });
-		expect(res.status).toBe(400);
-	});
-
-	it("should return 400 for fractional timeHorizonYears", async () => {
-		process.env.OPENAI_API_KEY = "test-key";
-		const res = await postProjections({ timeHorizonYears: 5.5 });
-		expect(res.status).toBe(400);
-	});
-
 	it("should return 400 for empty portfolio", async () => {
 		process.env.OPENAI_API_KEY = "test-key";
 		mockSnapshot(emptySnapshot);
-		const res = await postProjections({ timeHorizonYears: 10 });
+		const res = await postProjections();
 		expect(res.status).toBe(400);
 		const data = (await res.json()) as { code: string };
 		expect(data.code).toBe("VALIDATION_ERROR");
 	});
 
-	it("should return 200 with all three scenarios on success", async () => {
+	it("should return 200 with HybridProjectionResult on success", async () => {
 		process.env.OPENAI_API_KEY = "test-key";
 		mockSnapshot(populatedSnapshot);
-		mockGateway({ text: validProjectionsResponse });
+		mockGateway({ text: "Your portfolio is on track for solid growth." });
 
-		const res = await postProjections({ timeHorizonYears: 10 });
+		const res = await postProjections();
 		expect(res.status).toBe(200);
 		const data = (await res.json()) as {
-			timeHorizonYears: number;
-			optimistic: { label: string; narrative: string };
-			expected: { label: string };
-			conservative: { label: string };
+			deterministicData: null;
+			llmNarrative: string;
+			assumptions: string[];
+			disclaimer: string;
+			modelUsed: string;
 		};
-		expect(data.timeHorizonYears).toBe(10);
-		expect(data.optimistic.label).toBe("optimistic");
-		expect(data.optimistic.narrative).toContain("₹40L");
-		expect(data.expected.label).toBe("expected");
-		expect(data.conservative.label).toBe("conservative");
+		expect(data.deterministicData).toBeNull(); // snapshot has no deterministicProjections
+		expect(data.llmNarrative).toContain("Your portfolio is on track");
+		expect(data.llmNarrative).toContain("⚠️"); // disclaimer appended
+		expect(data.assumptions).toEqual([]);
+		expect(data.disclaimer).toContain("SEBI");
+		expect(data.modelUsed).toBe("gpt-4o-mini");
+	});
+
+	it("should return 200 with deterministicData when projections available", async () => {
+		process.env.OPENAI_API_KEY = "test-key";
+		const snapshotWithProjections: PortfolioSnapshot = {
+			...populatedSnapshot,
+			deterministicProjections: {
+				monthly: [],
+				quarterly: [],
+				yearly: [{ label: "2027", totalValuePaise: 250000_00 }],
+			},
+		};
+		mockSnapshot(snapshotWithProjections);
+		mockGateway({ text: "Growth looks steady." });
+
+		const res = await postProjections();
+		expect(res.status).toBe(200);
+		const data = (await res.json()) as {
+			deterministicData: { granularity: string; points: unknown[] };
+		};
+		expect(data.deterministicData).not.toBeNull();
+		expect(data.deterministicData?.granularity).toBe("yearly");
+		expect(data.deterministicData?.points).toHaveLength(1);
 	});
 
 	it("should return 503 when LLM is unavailable", async () => {
@@ -253,7 +241,7 @@ describe("POST /api/v1/insights/projections", () => {
 		mockSnapshot(populatedSnapshot);
 		mockGatewayError(new LLMUnavailableError("timeout"));
 
-		const res = await postProjections({ timeHorizonYears: 10 });
+		const res = await postProjections();
 		expect(res.status).toBe(503);
 		const data = (await res.json()) as { code: string };
 		expect(data.code).toBe("SERVICE_UNAVAILABLE");
@@ -466,7 +454,8 @@ describe("POST /api/v1/insights/query", () => {
 		const res = await postQuery({ question: "What is my return?" });
 		expect(res.status).toBe(200);
 		const data = (await res.json()) as { answer: string; modelUsed: string };
-		expect(data.answer).toBe("Your portfolio return is 11.1%.");
+		expect(data.answer).toContain("Your portfolio return is 11.1%.");
+		expect(data.answer).toContain("⚠️"); // disclaimer appended
 		expect(data.modelUsed).toBe("gpt-4o-mini");
 	});
 
@@ -489,11 +478,16 @@ const sampleHistoryRecord: LLMQueryWithResponse = {
 	insightType: "summary",
 	prompt: "You are a financial advisor...",
 	modelRequested: "gpt-4o-mini",
+	templateId: null,
+	templateVersion: null,
 	createdAt: new Date("2026-03-03T00:00:00Z"),
 	response: {
 		responseText: "Your portfolio looks healthy.",
 		modelUsed: "gpt-4o-mini",
 		tokensUsed: 120,
+		promptTokens: null,
+		completionTokens: null,
+		durationMs: null,
 		success: true,
 		errorMessage: null,
 		createdAt: new Date("2026-03-03T00:00:00Z"),

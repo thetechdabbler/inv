@@ -4,7 +4,12 @@
  */
 
 import { buildRenderContext } from "@/application/insights/snapshot-formatter";
+import {
+	INSIGHT_DISCLAIMER,
+	appendDisclaimer,
+} from "@/domain/insights/disclaimer";
 import type { LLMGatewayPort } from "@/domain/insights/llm-gateway";
+import { applyPostProcessing } from "@/domain/insights/post-processing";
 import {
 	getTemplate,
 	renderTemplate,
@@ -124,12 +129,24 @@ export async function recommendRebalancing(
 		template,
 		buildRenderContext(snapshot, { targetAllocationSection }),
 	);
-	const response = await gateway.complete(prompt, { insightType: "rebalancing" });
+	const response = await gateway.complete(prompt, {
+		insightType: "rebalancing",
+		templateId: template.id,
+		templateVersion: template.version,
+	});
 	const parsed = parseRebalancingJson(response.text);
 
+	// Post-processing applies to string fields only — not the full JSON blob
+	const processedActions = parsed.actions.map((a) => ({
+		...a,
+		suggestion: applyPostProcessing(a.suggestion),
+	})) as RebalancingAction[];
+	const narrative = appendDisclaimer(applyPostProcessing(parsed.narrative));
+
 	return {
-		actions: parsed.actions as RebalancingAction[],
-		narrative: parsed.narrative,
+		actions: processedActions,
+		narrative,
 		modelUsed: response.modelUsed,
+		disclaimer: INSIGHT_DISCLAIMER,
 	};
 }

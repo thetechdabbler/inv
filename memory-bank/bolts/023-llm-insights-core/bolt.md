@@ -3,15 +3,27 @@ id: 023-llm-insights-core
 unit: 001-llm-insights-core
 intent: 004-ai-insights-improvement
 type: ddd-construction-bolt
-status: planned
+status: complete
 stories:
   - 003-hybrid-projections
   - 004-guardrails-and-audit
 created: 2026-03-04T00:00:00Z
-started: null
-completed: null
+started: 2026-03-04T01:05:00Z
+completed: 2026-03-04T19:58:00Z
 current_stage: null
-stages_completed: []
+stages_completed:
+  - name: model
+    completed: 2026-03-04T01:10:00Z
+    artifact: ddd-01-domain-model.md
+  - name: design
+    completed: 2026-03-04T01:20:00Z
+    artifact: ddd-02-technical-design.md
+  - name: implement
+    completed: 2026-03-04T19:55:00Z
+    artifact: src/domain/insights/disclaimer.ts + 15 files
+  - name: test
+    completed: 2026-03-04T19:58:00Z
+    artifact: ddd-03-test-report.md
 requires_bolts:
   - 022-llm-insights-core
 enables_bolts:
@@ -68,13 +80,13 @@ Wire deterministic projection data into LLM projection prompts and return a stru
 
 ## Success Criteria
 
-- [ ] `HybridProjectionResult` type defined with `deterministicData`, `llmNarrative`, `assumptions` fields
-- [ ] Projection insight API returns both fields in a single response
-- [ ] Post-processing pipeline strips explicit product recommendations
-- [ ] Consistent disclaimer appended to all insight responses
-- [ ] Audit records enriched with `promptTokens`, `completionTokens`, `durationMs`, `templateId`, `templateVersion`
-- [ ] Debug endpoint `/api/v1/insights/debug/:auditId` returns raw prompt + response (authenticated)
-- [ ] Graceful fallback when projections unavailable or LLM fails
+- [x] `HybridProjectionResult` type defined with `deterministicData`, `llmNarrative`, `assumptions` fields
+- [x] Projection insight API returns both fields in a single response
+- [x] Post-processing pipeline strips explicit product recommendations
+- [x] Consistent disclaimer appended to all insight responses
+- [x] Audit records enriched with `promptTokens`, `completionTokens`, `durationMs`, `templateId`, `templateVersion`
+- [x] Debug endpoint `/api/v1/insights/debug/:auditId` returns raw prompt + response (authenticated)
+- [x] Graceful fallback when projections unavailable or LLM fails
 
 ## Notes
 

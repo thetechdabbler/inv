@@ -1,4 +1,8 @@
 /**
+ * @deprecated Replaced by generateHybridProjection() in bolt 023.
+ * The /api/v1/insights/projections route now returns HybridProjectionResult.
+ * This file is retained until all consumers are updated; delete in next cleanup pass.
+ *
  * Use case: generate future portfolio value projections (optimistic/expected/conservative).
  * Expects JSON response from LLM; parses and validates before returning.
  */

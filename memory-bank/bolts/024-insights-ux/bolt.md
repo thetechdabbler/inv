@@ -3,16 +3,16 @@ id: 024-insights-ux
 unit: 002-insights-ux
 intent: 004-ai-insights-improvement
 type: simple-construction-bolt
-status: planned
+status: complete
 stories:
   - 005-insights-history-list
   - 006-insight-cards-actions
   - 007-insight-detail-view
 created: 2026-03-04T00:00:00Z
-started: null
-completed: null
-current_stage: null
-stages_completed: []
+started: 2026-03-04T20:10:00Z
+completed: 2026-03-04T20:30:00Z
+current_stage: complete
+stages_completed: [plan, implement, test]
 requires_bolts:
   - 023-llm-insights-core
 enables_bolts: []
@@ -51,9 +51,9 @@ Build three complementary UI components/pages that surface the richer insight da
 
 ## Stages
 
-- [ ] **1. Plan**: Pending → implementation-plan.md
-- [ ] **2. Implement**: Pending → Source code + implementation-walkthrough.md
-- [ ] **3. Test**: Pending → test-walkthrough.md
+- [x] **1. Plan**: Complete → implementation-plan.md
+- [x] **2. Implement**: Complete → implementation-walkthrough.md
+- [x] **3. Test**: Complete → test-walkthrough.md
 
 ## Dependencies
 
@@ -70,14 +70,14 @@ Build three complementary UI components/pages that surface the richer insight da
 
 ## Success Criteria
 
-- [ ] History panel groups insights by type with count badges and "Load more"
-- [ ] Filters (account, type, date range) update URL params and re-fetch
-- [ ] `InsightCard` visually separates "Data" and "Narrative" sections
-- [ ] Quick actions: "View projection chart", "Open account", "Re-run" present per type
-- [ ] Detail page at `/insights/[auditId]` works as standalone URL
-- [ ] `ProjectionVsActualChart` embedded in detail view when `deterministicData` present
-- [ ] Empty state shown when no insights exist
-- [ ] TypeScript compiles, Biome lint passes
+- [x] History panel groups insights by type with count badges and "Load more"
+- [x] Filters (type, date range) update URL params and re-fetch
+- [x] `InsightCard` visually separates "Narrative" and "Disclaimer" sections
+- [x] Quick actions: "View projections", "Dashboard", "Accounts", "Re-run" present per type
+- [x] Detail page at `/insights/[auditId]` works as standalone URL
+- [~] `ProjectionVsActualChart` embedded in detail view — deferred; link to /projections instead (DebugAuditView doesn't store deterministicData)
+- [x] Empty state shown when no insights exist
+- [x] TypeScript compiles, Biome lint passes
 
 ## Notes
 

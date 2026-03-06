@@ -7,6 +7,9 @@
 export interface LLMResponse {
 	text: string;
 	modelUsed: string;
+	/** Token counts from LLM provider — null when provider does not return usage. */
+	promptTokens?: number | null;
+	completionTokens?: number | null;
 }
 
 export interface LLMCompletionOptions {
@@ -14,6 +17,9 @@ export interface LLMCompletionOptions {
 	timeoutMs?: number;
 	/** Insight type label written to the audit trail (ADR-004). */
 	insightType?: string;
+	/** Template provenance — stored in audit record when call originates from renderTemplate(). */
+	templateId?: string;
+	templateVersion?: string;
 }
 
 export interface LLMGatewayPort {
